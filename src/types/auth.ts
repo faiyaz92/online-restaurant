@@ -7,8 +7,7 @@ export enum Role {
   COMPANY_ACCOUNTANT = 'company_accountant',
   SALESMAN = 'salesman',
   DELIVERY = 'delivery',
-  MANAGER = 'manager',
-  CUSTOMER = 'customer'
+  MANAGER = 'manager'
 }
 
 export enum UserType {

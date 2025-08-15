@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserInfo } from '@/hooks/useUserInfo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Loader2, Eye, EyeOff, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
+import { Role, UserType } from '@/types/auth';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -15,11 +17,20 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const { currentUser, login, resetPassword } = useAuth();
+  const userInfo = useUserInfo();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
-  if (currentUser) {
-    return <Navigate to="/admin" replace />;
+  // Redirect if already logged in based on user type and role
+  if (currentUser && userInfo.isAuthenticated) {
+    if (userInfo.userType === UserType.Customer) {
+      return <Navigate to="/" replace />;
+    } else if (userInfo.userType === UserType.Employee && 
+               (userInfo.role === Role.COMPANY_ADMIN || 
+                userInfo.role === Role.STORE_ADMIN || 
+                userInfo.role === Role.STORE_MANAGER)) {
+      return <Navigate to="/admin" replace />;
+    }
+    return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +45,20 @@ const LoginForm = () => {
     try {
       await login(email, password);
       toast.success('Login successful!');
-      navigate('/admin');
+      
+      // Wait a moment for userInfo to update, then redirect based on role
+      setTimeout(() => {
+        if (userInfo.userType === UserType.Customer) {
+          navigate('/');
+        } else if (userInfo.userType === UserType.Employee && 
+                   (userInfo.role === Role.COMPANY_ADMIN || 
+                    userInfo.role === Role.STORE_ADMIN || 
+                    userInfo.role === Role.STORE_MANAGER)) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      }, 1000);
     } catch (error: any) {
       console.error('Login error:', error);
       let errorMessage = 'Login failed. Please try again.';

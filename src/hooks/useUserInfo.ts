@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { auth, firestore } from '@/config/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, getDocs, collection, query, where, limit } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { UserInfo, Role, UserType } from '@/types/auth';
 
 export const useUserInfo = (): UserInfo => {
   const [userInfo, setUserInfo] = useState<UserInfo>({
     userId: '',
     companyId: '',
-    role: Role.CUSTOMER,
+    role: Role.COMPANY_ADMIN,
     userName: '',
     isAuthenticated: false,
     email: '',
@@ -26,7 +26,7 @@ export const useUserInfo = (): UserInfo => {
           setUserInfo({
             userId: userData.userId || '',
             companyId: userData.companyId || 'abc_pvt_ltd',
-            role: userData.role || Role.CUSTOMER,
+            role: userData.role || Role.COMPANY_ADMIN,
             userName: userData.userName || '',
             isAuthenticated: !!(userData.userId),
             email: userData.email || '',
@@ -76,7 +76,7 @@ export const useUserInfo = (): UserInfo => {
               const userInfoData: UserInfo = {
                 userId: userData.userId || user.uid,
                 companyId: userData.companyId || 'abc_pvt_ltd',
-                role: userData.role || Role.CUSTOMER,
+                role: userData.role || Role.COMPANY_ADMIN,
                 userName: userData.userName || user.displayName || '',
                 isAuthenticated: true,
                 email: userData.email || user.email || '',
@@ -98,7 +98,7 @@ export const useUserInfo = (): UserInfo => {
               const defaultUserData: UserInfo = {
                 userId: user.uid,
                 companyId: 'abc_pvt_ltd',
-                role: Role.CUSTOMER,
+                role: Role.COMPANY_ADMIN,
                 userName: user.displayName || user.email?.split('@')[0] || '',
                 isAuthenticated: true,
                 email: user.email || '',
@@ -114,7 +114,7 @@ export const useUserInfo = (): UserInfo => {
             setUserInfo({
               userId: '',
               companyId: 'abc_pvt_ltd',
-              role: Role.CUSTOMER,
+              role: Role.COMPANY_ADMIN,
               userName: '',
               isAuthenticated: false,
               email: '',
@@ -131,7 +131,7 @@ export const useUserInfo = (): UserInfo => {
         setUserInfo({
           userId: '',
           companyId: 'abc_pvt_ltd',
-          role: Role.CUSTOMER,
+          role: Role.COMPANY_ADMIN,
           userName: '',
           isAuthenticated: false,
           email: '',
