@@ -1,176 +1,169 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Plus, 
   Search, 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
+  MoreVertical, 
+  Edit2, 
+  Trash2,
   FolderOpen,
-  Upload
+  Image as ImageIcon,
+  Loader2
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { useFirebaseCategories, Category } from '@/hooks/useFirebaseCategories';
 
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  productCount: number;
-  status: 'active' | 'inactive';
-}
-
-export const CategoryManager: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([
-    {
-      id: '1',
-      name: 'Electronics',
-      description: 'Smartphones, laptops, headphones, and other electronic devices',
-      image: '/placeholder.svg',
-      productCount: 45,
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Accessories',
-      description: 'Phone cases, laptop stands, cables, and other accessories',
-      image: '/placeholder.svg',
-      productCount: 23,
-      status: 'active'
-    },
-    {
-      id: '3',
-      name: 'Clothing',
-      description: 'T-shirts, jeans, dresses, and fashion accessories',
-      image: '/placeholder.svg',
-      productCount: 67,
-      status: 'active'
-    },
-    {
-      id: '4',
-      name: 'Home & Garden',
-      description: 'Furniture, decorations, kitchen appliances, and garden tools',
-      image: '/placeholder.svg',
-      productCount: 34,
-      status: 'active'
-    }
-  ]);
+export const CategoryManager = () => {
+  const { categories, loading, addCategory, updateCategory, deleteCategory } = useFirebaseCategories();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-
-  // Form state
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    image: ''
+    image: '',
+    status: 'active'
   });
 
   const filteredCategories = categories.filter(category =>
     category.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!formData.name) {
       toast.error('Please enter a category name');
       return;
     }
 
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: formData.name,
-      description: formData.description,
-      image: formData.image || '/placeholder.svg',
-      productCount: 0,
-      status: 'active'
-    };
+    try {
+      setIsLoading(true);
+      await addCategory({
+        name: formData.name,
+        description: formData.description,
+        image: formData.image || '/placeholder.svg',
+        status: formData.status as 'active' | 'inactive'
+      });
 
-    setCategories([...categories, newCategory]);
-    setFormData({
-      name: '',
-      description: '',
-      image: ''
-    });
-    setIsAddDialogOpen(false);
-    toast.success('Category added successfully!');
+      setIsAddDialogOpen(false);
+      resetForm();
+      toast.success('Category added successfully');
+    } catch (error) {
+      toast.error('Failed to add category');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEditCategory = (category: Category) => {
     setEditingCategory(category);
     setFormData({
       name: category.name,
-      description: category.description,
-      image: category.image
+      description: category.description || '',
+      image: category.image || '',
+      status: category.status
     });
     setIsAddDialogOpen(true);
   };
 
-  const handleUpdateCategory = () => {
+  const handleUpdateCategory = async () => {
     if (!editingCategory || !formData.name) {
       toast.error('Please enter a category name');
       return;
     }
 
-    setCategories(categories.map(cat => 
-      cat.id === editingCategory.id 
-        ? {
-            ...cat,
-            name: formData.name,
-            description: formData.description,
-            image: formData.image || '/placeholder.svg'
-          }
-        : cat
-    ));
+    try {
+      setIsLoading(true);
+      await updateCategory(editingCategory.id, {
+        name: formData.name,
+        description: formData.description,
+        image: formData.image,
+        status: formData.status as 'active' | 'inactive'
+      });
 
-    setFormData({
-      name: '',
-      description: '',
-      image: ''
-    });
-    setEditingCategory(null);
-    setIsAddDialogOpen(false);
-    toast.success('Category updated successfully!');
+      setIsAddDialogOpen(false);
+      setEditingCategory(null);
+      resetForm();
+      toast.success('Category updated successfully');
+    } catch (error) {
+      toast.error('Failed to update category');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
+  const handleDeleteCategory = async (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId);
-    if (category && category.productCount > 0) {
+    if (category && category.productCount && category.productCount > 0) {
       toast.error('Cannot delete category with existing products');
       return;
     }
 
-    setCategories(categories.filter(c => c.id !== categoryId));
-    toast.success('Category deleted successfully!');
+    try {
+      await deleteCategory(categoryId);
+      toast.success('Category deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete category');
+    }
   };
 
   const resetForm = () => {
     setFormData({
       name: '',
       description: '',
-      image: ''
+      image: '',
+      status: 'active'
     });
     setEditingCategory(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading categories...</span>
+      </div>
+    );
+  }
+
+  if (filteredCategories.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">No categories found</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          {searchTerm ? 'Try adjusting your search' : 'Get started by adding your first category'}
+        </p>
+        {!searchTerm && (
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Category
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -226,25 +219,27 @@ export const CategoryManager: React.FC = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="image">Category Image</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="image"
-                    value={formData.image}
-                    onChange={(e) => setFormData({...formData, image: e.target.value})}
-                    placeholder="Enter image URL"
-                  />
-                  <Button variant="outline" size="icon">
-                    <Upload className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Input
+                  id="image"
+                  value={formData.image}
+                  onChange={(e) => setFormData({...formData, image: e.target.value})}
+                  placeholder="Enter image URL"
+                />
               </div>
               
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={editingCategory ? handleUpdateCategory : handleAddCategory}>
-                  {editingCategory ? 'Update Category' : 'Add Category'}
+                <Button onClick={editingCategory ? handleUpdateCategory : handleAddCategory} disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {editingCategory ? 'Updating...' : 'Adding...'}
+                    </>
+                  ) : (
+                    editingCategory ? 'Update Category' : 'Add Category'
+                  )}
                 </Button>
               </div>
             </div>
@@ -274,7 +269,7 @@ export const CategoryManager: React.FC = () => {
             <CardContent className="p-0">
               <div className="relative">
                 <img
-                  src={category.image}
+                  src={category.image || '/placeholder.svg'}
                   alt={category.name}
                   className="w-full h-32 object-cover rounded-t-lg"
                 />
@@ -282,18 +277,18 @@ export const CategoryManager: React.FC = () => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="secondary" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                        <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEditCategory(category)}>
-                        <Edit className="h-4 w-4 mr-2" />
+                        <Edit2 className="h-4 w-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => handleDeleteCategory(category.id)}
                         className="text-destructive"
-                        disabled={category.productCount > 0}
+                        disabled={(category.productCount || 0) > 0}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
@@ -307,7 +302,7 @@ export const CategoryManager: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">{category.name}</h3>
                   <Badge variant="secondary">
-                    {category.productCount} products
+                    {category.productCount || 0} products
                   </Badge>
                 </div>
                 
@@ -330,27 +325,6 @@ export const CategoryManager: React.FC = () => {
           </Card>
         ))}
       </div>
-
-      {filteredCategories.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <FolderOpen className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No categories found</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              {searchTerm 
-                ? 'Try adjusting your search criteria'
-                : 'Get started by creating your first product category'
-              }
-            </p>
-            {!searchTerm && (
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

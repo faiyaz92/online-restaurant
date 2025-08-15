@@ -8,7 +8,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { auth } from '@/config/firebase';
+import { auth, firestore } from '@/config/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useFirestorePaths } from '@/hooks/useFirestorePaths';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -36,9 +38,29 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const paths = useFirestorePaths('abc_pvt_ltd');
 
   const login = async (email: string, password: string): Promise<void> => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    // Check if user exists in our tenant users collection
+    const userDocRef = doc(firestore, paths.getTenantUserPath(user.uid));
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      // Create default customer user if doesn't exist
+      await setDoc(userDocRef, {
+        userId: user.uid,
+        companyId: 'abc_pvt_ltd',
+        email: user.email,
+        name: user.displayName || '',
+        userName: user.email?.split('@')[0] || '',
+        role: 'customer',
+        userType: 'Customer',
+        createdAt: new Date().toISOString()
+      });
+    }
   };
 
   const loginWithGoogle = async (): Promise<void> => {

@@ -1,149 +1,117 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Plus, 
   Search, 
-  MoreHorizontal, 
-  Edit, 
+  MoreVertical, 
+  Edit2, 
   Trash2, 
   Eye,
-  Upload,
-  Package
+  Package,
+  Filter,
+  X,
+  Loader2
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { Product } from '@/types/product';
+import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
+import { useFirebaseCategories } from '@/hooks/useFirebaseCategories';
 
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  discountedPrice?: number;
-  category: string;
-  stock: number;
-  image: string;
-  status: 'active' | 'inactive';
-}
-
-export const ProductManager: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: '1',
-      name: 'Wireless Headphones',
-      description: 'High-quality wireless headphones with noise cancellation',
-      price: 199.99,
-      discountedPrice: 149.99,
-      category: 'Electronics',
-      stock: 45,
-      image: '/placeholder.svg',
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Smart Watch',
-      description: 'Feature-rich smartwatch with health monitoring',
-      price: 299.99,
-      category: 'Electronics',
-      stock: 23,
-      image: '/placeholder.svg',
-      status: 'active'
-    },
-    {
-      id: '3',
-      name: 'Laptop Stand',
-      description: 'Adjustable aluminum laptop stand for ergonomic working',
-      price: 49.99,
-      category: 'Accessories',
-      stock: 67,
-      image: '/placeholder.svg',
-      status: 'active'
-    }
-  ]);
+export const ProductManager = () => {
+  const { products, loading: productsLoading, addProduct, updateProduct, deleteProduct } = useFirebaseProducts();
+  const { categories, loading: categoriesLoading } = useFirebaseCategories();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Form state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     discountedPrice: '',
-    category: '',
+    categoryId: '',
     stock: '',
-    image: ''
+    images: [] as string[]
   });
 
-  const categories = ['Electronics', 'Accessories', 'Clothing', 'Home & Garden'];
-
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
+    
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddProduct = () => {
-    if (!formData.name || !formData.price || !formData.category) {
+  const handleAddProduct = async () => {
+    if (!formData.name || !formData.price || !formData.categoryId) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name: formData.name,
-      description: formData.description,
-      price: parseFloat(formData.price),
-      discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice) : undefined,
-      category: formData.category,
-      stock: parseInt(formData.stock) || 0,
-      image: formData.image || '/placeholder.svg',
-      status: 'active'
-    };
+    try {
+      setLoading(true);
+      const category = categories.find(c => c.id === formData.categoryId);
+      
+      await addProduct({
+        productId: Date.now().toString(),
+        ...formData,
+        category: category?.name || '',
+        price: parseFloat(formData.price.toString()),
+        discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice.toString()) : undefined,
+        stock: parseInt(formData.stock.toString()),
+        images: formData.images.length > 0 ? formData.images : ['/placeholder.svg'],
+        status: 'active',
+        companyId: 'abc_pvt_ltd',
+        createdAt: new Date()
+      });
 
-    setProducts([...products, newProduct]);
-    setFormData({
-      name: '',
-      description: '',
-      price: '',
-      discountedPrice: '',
-      category: '',
-      stock: '',
-      image: ''
-    });
-    setIsAddDialogOpen(false);
-    toast.success('Product added successfully!');
+      setIsAddDialogOpen(false);
+      resetForm();
+      toast.success('Product added successfully');
+    } catch (error) {
+      toast.error('Failed to add product');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    setProducts(products.filter(p => p.id !== productId));
-    toast.success('Product deleted successfully!');
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await deleteProduct(productId);
+      toast.success('Product deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete product');
+    }
   };
 
   const resetForm = () => {
@@ -152,12 +120,39 @@ export const ProductManager: React.FC = () => {
       description: '',
       price: '',
       discountedPrice: '',
-      category: '',
+      categoryId: '',
       stock: '',
-      image: ''
+      images: []
     });
     setEditingProduct(null);
   };
+
+  if (productsLoading || categoriesLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading products...</span>
+      </div>
+    );
+  }
+
+  if (filteredProducts.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-medium text-muted-foreground mb-2">No products found</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          {searchTerm || selectedCategory ? 'Try adjusting your filters' : 'Get started by adding your first product'}
+        </p>
+        {!searchTerm && !selectedCategory && (
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Product
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -196,18 +191,18 @@ export const ProductManager: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
+                  <Label htmlFor="categoryId">Category *</Label>
                   <Select 
-                    value={formData.category} 
-                    onValueChange={(value) => setFormData({...formData, category: value})}
+                    value={formData.categoryId} 
+                    onValueChange={(value) => setFormData({...formData, categoryId: value})}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -261,27 +256,19 @@ export const ProductManager: React.FC = () => {
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="image">Image URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="image"
-                    value={formData.image}
-                    onChange={(e) => setFormData({...formData, image: e.target.value})}
-                    placeholder="Enter image URL"
-                  />
-                  <Button variant="outline" size="icon">
-                    <Upload className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddProduct}>
-                  Add Product
+                <Button onClick={handleAddProduct} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    'Add Product'
+                  )}
                 </Button>
               </div>
             </div>
@@ -310,8 +297,8 @@ export const ProductManager: React.FC = () => {
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category}
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -323,11 +310,11 @@ export const ProductManager: React.FC = () => {
       {/* Products Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredProducts.map((product) => (
-          <Card key={product.id} className="group hover:shadow-elevation transition-shadow">
+          <Card key={product.productId} className="group hover:shadow-elevation transition-shadow">
             <CardContent className="p-0">
               <div className="relative">
                 <img
-                  src={product.image}
+                  src={product.images?.[0] || '/placeholder.svg'}
                   alt={product.name}
                   className="w-full h-48 object-cover rounded-t-lg"
                 />
@@ -335,7 +322,7 @@ export const ProductManager: React.FC = () => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="secondary" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                        <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -344,11 +331,11 @@ export const ProductManager: React.FC = () => {
                         View
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
+                        <Edit2 className="h-4 w-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        onClick={() => handleDeleteProduct(product.id)}
+                        onClick={() => handleDeleteProduct(product.productId)}
                         className="text-destructive"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -401,27 +388,6 @@ export const ProductManager: React.FC = () => {
           </Card>
         ))}
       </div>
-
-      {filteredProducts.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No products found</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              {searchTerm || selectedCategory !== 'all' 
-                ? 'Try adjusting your search or filter criteria'
-                : 'Get started by adding your first product'
-              }
-            </p>
-            {!searchTerm && selectedCategory === 'all' && (
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
