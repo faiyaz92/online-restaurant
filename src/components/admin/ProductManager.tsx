@@ -85,12 +85,11 @@ export const ProductManager = () => {
       await addProduct({
         productId: Date.now().toString(),
         ...formData,
-        category: category?.name || '',
+        categoryId: formData.categoryId,
         price: parseFloat(formData.price.toString()),
         discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice.toString()) : undefined,
         stock: parseInt(formData.stock.toString()),
         images: formData.images.length > 0 ? formData.images : ['/placeholder.svg'],
-        status: 'active',
         companyId: 'abc_pvt_ltd',
         createdAt: new Date()
       });
@@ -380,7 +379,7 @@ export const ProductManager = () => {
                   </div>
                   
                   <Badge variant="outline" className="text-xs">
-                    {product.category}
+                    {categories.find(c => c.id === product.categoryId)?.name || 'No Category'}
                   </Badge>
                 </div>
               </div>

@@ -24,10 +24,21 @@ export const useFirebaseCategories = () => {
     const unsubscribe = onSnapshot(
       collection(firestore, paths.getCategoryPath()),
       (snapshot) => {
-        const categoriesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Category[];
+        const categoriesData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            categoryId: doc.id,
+            name: data.name || '',
+            description: data.description,
+            image: data.image,
+            status: data.status || 'active',
+            productCount: data.productCount || 0,
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString(),
+            companyId: data.companyId || 'abc_pvt_ltd'
+          };
+        }) as Category[];
         setCategories(categoriesData);
         setLoading(false);
       },

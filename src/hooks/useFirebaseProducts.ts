@@ -14,10 +14,24 @@ export const useFirebaseProducts = () => {
     const unsubscribe = onSnapshot(
       collection(firestore, paths.getProductPath()),
       (snapshot) => {
-        const productsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Product[];
+        const productsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            productId: doc.id,
+            name: data.name || '',
+            description: data.description || '',
+            price: data.price || 0,
+            discountedPrice: data.discountedPrice,
+            images: data.images || [],
+            categoryId: data.categoryId || '',
+            subcategoryId: data.subcategoryId,
+            stock: data.stock || 0,
+            variants: data.variants || [],
+            createdAt: data.createdAt || new Date(),
+            companyId: data.companyId || 'abc_pvt_ltd'
+          } as Product;
+        });
         setProducts(productsData);
         setLoading(false);
       },

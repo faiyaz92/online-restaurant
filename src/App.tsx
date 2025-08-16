@@ -19,7 +19,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<StorePage onAdminClick={() => window.location.href = '/admin'} onLoginClick={() => {}} onLogoutClick={() => {}} />} />
+            <Route path="/" element={<StorePage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/admin/*" element={<AdminPage onBackToStore={() => window.location.href = '/'} onLogout={() => {}} />} />
             <Route path="*" element={<NotFound />} />

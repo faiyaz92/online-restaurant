@@ -1,14 +1,32 @@
 import React from 'react';
 import { Product } from '@/types/product';
 import { ProductCard } from './ProductCard';
+import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
 
 interface ProductGridProps {
-  products: Product[];
-  onProductClick: (product: Product) => void;
+  searchTerm: string;
+  selectedCategory: string;
 }
 
-export const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick }) => {
-  if (products.length === 0) {
+export const ProductGrid: React.FC<ProductGridProps> = ({ searchTerm, selectedCategory }) => {
+  const { products, loading } = useFirebaseProducts();
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (filteredProducts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
@@ -22,11 +40,11 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductCli
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {products.map((product) => (
+      {filteredProducts.map((product) => (
         <ProductCard
           key={product.productId}
           product={product}
-          onProductClick={onProductClick}
+          onProductClick={() => {}}
         />
       ))}
     </div>

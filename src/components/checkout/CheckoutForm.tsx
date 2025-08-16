@@ -55,7 +55,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         userId: currentUser.uid,
         companyId: 'abc_pvt_ltd',
         items: items.map(item => ({
-          productId: item.id,
+          productId: item.productId,
           name: item.name,
           price: item.price,
           quantity: item.quantity,

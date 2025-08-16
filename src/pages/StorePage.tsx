@@ -6,9 +6,10 @@ import { ProductGrid } from '@/components/shopping/ProductGrid';
 import { Cart } from '@/components/shopping/Cart';
 import { CheckoutForm } from '@/components/checkout/CheckoutForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
+import { useFirebaseCategories } from '@/hooks/useFirebaseCategories';
+import { Category } from '@/types/product';
 import LoginForm from '@/components/auth/LoginForm';
-import { Product } from '@/types/product';
+import { useNavigate } from 'react-router-dom';
 
 export const StorePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,8 +17,18 @@ export const StorePage = () => {
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const { currentUser } = useAuth();
-  const { products } = useFirebaseProducts();
+  const { currentUser, logout } = useAuth();
+  const { categories: firebaseCategories } = useFirebaseCategories();
+  
+  // Convert Firebase categories to Product categories
+  const categories: Category[] = firebaseCategories.map(cat => ({
+    categoryId: cat.id,
+    name: cat.name,
+    description: cat.description,
+    image: cat.image,
+    companyId: 'abc_pvt_ltd'
+  }));
+  const navigate = useNavigate();
 
   const handleCheckout = () => {
     if (!currentUser) {
@@ -50,7 +61,11 @@ export const StorePage = () => {
   if (showCheckout) {
     return (
       <div className="min-h-screen bg-background">
-        <Header onCartClick={() => setShowCart(true)} />
+        <Header 
+          onCartClick={() => setShowCart(true)}
+          onLogin={() => setShowLogin(true)}
+          onLogout={logout}
+        />
         <CheckoutForm onOrderComplete={handleOrderComplete} />
       </div>
     );
@@ -58,7 +73,12 @@ export const StorePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onCartClick={() => setShowCart(true)} />
+      <Header 
+        onCartClick={() => setShowCart(true)}
+        onLogin={() => setShowLogin(true)}
+        onLogout={logout}
+        onAdminClick={() => navigate('/admin')}
+      />
       
       <main className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
@@ -66,6 +86,7 @@ export const StorePage = () => {
           <div className="lg:w-64 space-y-6">
             <SearchBar value={searchTerm} onChange={setSearchTerm} />
             <CategoryFilter
+              categories={categories}
               selectedCategory={selectedCategory}
               onCategoryChange={setSelectedCategory}
             />

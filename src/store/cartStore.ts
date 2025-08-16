@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CartItem, Product } from '@/types/product';
+import { Product } from '@/types/product';
+
+export interface CartItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  image?: string;
+  quantity: number;
+}
 
 interface CartStore {
   items: CartItem[];
@@ -88,8 +97,7 @@ export const useCartStore = create<CartStore>()(
 
       get total() {
         return get().items.reduce((total, item) => {
-          // For checkout, we'll use a basic calculation without product lookup
-          return total + (item.quantity * 50); // Default price, will be updated with real product data
+          return total + (item.price * item.quantity);
         }, 0);
       },
     }),

@@ -5,15 +5,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Category } from '@/types/product';
 
 interface CategoryFilterProps {
-  categories: Category[];
-  selectedCategory: string | null;
-  onCategorySelect: (categoryId: string | null) => void;
+  categories?: Category[];
+  selectedCategory: string;
+  onCategoryChange: (categoryId: string) => void;
 }
 
 export const CategoryFilter: React.FC<CategoryFilterProps> = ({
-  categories,
+  categories = [],
   selectedCategory,
-  onCategorySelect,
+  onCategoryChange,
 }) => {
   return (
     <div className="space-y-3">
@@ -21,10 +21,10 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
       <ScrollArea className="h-auto max-h-64">
         <div className="space-y-2">
           <Button
-            variant={selectedCategory === null ? "default" : "ghost"}
+            variant={selectedCategory === 'all' ? "default" : "ghost"}
             size="sm"
             className="w-full justify-start"
-            onClick={() => onCategorySelect(null)}
+            onClick={() => onCategoryChange('all')}
           >
             All Products
           </Button>
@@ -35,7 +35,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
               variant={selectedCategory === category.categoryId ? "default" : "ghost"}
               size="sm"
               className="w-full justify-between"
-              onClick={() => onCategorySelect(category.categoryId)}
+              onClick={() => onCategoryChange(category.categoryId)}
             >
               <span>{category.name}</span>
               <Badge variant="secondary" className="text-xs">
