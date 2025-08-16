@@ -92,15 +92,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
                 {product.discountedPrice ? (
                   <>
                     <span className="font-bold text-primary">
-                      ${product.discountedPrice.toFixed(2)}
+                      ${Number(product.discountedPrice).toFixed(2)}
                     </span>
                     <span className="text-sm text-muted-foreground line-through">
-                      ${product.price.toFixed(2)}
+                      ${Number(product.price).toFixed(2)}
                     </span>
                   </>
                 ) : (
                   <span className="font-bold text-primary">
-                    ${product.price.toFixed(2)}
+                    ${Number(product.price).toFixed(2)}
                   </span>
                 )}
               </div>

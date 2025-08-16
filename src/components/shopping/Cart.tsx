@@ -74,7 +74,7 @@ export const Cart: React.FC<CartProps> = ({ onCheckout }) => {
                 </div>
                 
                 <div className="text-right">
-                  <p className="font-medium">${itemTotal.toFixed(2)}</p>
+                  <p className="font-medium">${Number(itemTotal || 0).toFixed(2)}</p>
                 </div>
               </div>
             </Card>

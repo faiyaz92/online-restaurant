@@ -46,7 +46,7 @@ export const useCartStore = create<CartStore>()(
               productId: product.productId,
               id: product.productId,
               name: product.name,
-              price: product.discountedPrice || product.price,
+              price: Number(product.discountedPrice || product.price) || 0,
               image: product.images?.[0],
               quantity 
             }]
@@ -88,7 +88,7 @@ export const useCartStore = create<CartStore>()(
         return items.reduce((total, item) => {
           const product = products.find(p => p.productId === item.productId);
           if (product) {
-            const price = product.discountedPrice || product.price;
+            const price = Number(product.discountedPrice || product.price) || 0;
             return total + (price * item.quantity);
           }
           return total;
@@ -97,7 +97,8 @@ export const useCartStore = create<CartStore>()(
 
       get total() {
         return get().items.reduce((total, item) => {
-          return total + (item.price * item.quantity);
+          const price = Number(item.price) || 0;
+          return total + (price * item.quantity);
         }, 0);
       },
     }),
