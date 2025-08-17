@@ -51,6 +51,7 @@ export const ProductManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -104,6 +105,47 @@ export const ProductManager = () => {
     }
   };
 
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      discountedPrice: product.discountedPrice?.toString() || '',
+      categoryId: product.categoryId,
+      stock: product.stock.toString(),
+      images: product.images
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct || !formData.name || !formData.price || !formData.categoryId) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      await updateProduct(editingProduct.productId, {
+        ...formData,
+        price: parseFloat(formData.price.toString()),
+        discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice.toString()) : undefined,
+        stock: parseInt(formData.stock.toString()),
+        images: formData.images.length > 0 ? formData.images : ['/placeholder.svg'],
+      });
+
+      setIsEditDialogOpen(false);
+      resetForm();
+      toast.success('Product updated successfully');
+    } catch (error) {
+      toast.error('Failed to update product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteProduct = async (productId: string) => {
     try {
       await deleteProduct(productId);
@@ -124,6 +166,7 @@ export const ProductManager = () => {
       images: []
     });
     setEditingProduct(null);
+    setIsEditDialogOpen(false);
   };
 
   if (productsLoading || categoriesLoading) {
@@ -273,6 +316,112 @@ export const ProductManager = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Product Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Product</DialogTitle>
+              <DialogDescription>
+                Update the product details below
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Product Name *</Label>
+                  <Input
+                    id="edit-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Enter product name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-categoryId">Category *</Label>
+                  <Select 
+                    value={formData.categoryId} 
+                    onValueChange={(value) => setFormData({...formData, categoryId: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(category => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  placeholder="Enter product description"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-price">Price *</Label>
+                  <Input
+                    id="edit-price"
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-discountedPrice">Sale Price</Label>
+                  <Input
+                    id="edit-discountedPrice"
+                    type="number"
+                    step="0.01"
+                    value={formData.discountedPrice}
+                    onChange={(e) => setFormData({...formData, discountedPrice: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-stock">Stock</Label>
+                  <Input
+                    id="edit-stock"
+                    type="number"
+                    value={formData.stock}
+                    onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateProduct} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Product'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
@@ -329,7 +478,7 @@ export const ProductManager = () => {
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditProduct(product)}>
                         <Edit2 className="h-4 w-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
