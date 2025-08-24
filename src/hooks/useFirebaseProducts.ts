@@ -24,6 +24,7 @@ export const useFirebaseProducts = () => {
             description: data.description || '',
             price: data.price || 0,
             discountedPrice: data.discountedPrice,
+            taxRate: data.taxRate || 0, // Added taxRate
             categoryId: data.categoryId || '',
             subcategoryId: data.subcategoryId,
             stock: data.stock || 0,

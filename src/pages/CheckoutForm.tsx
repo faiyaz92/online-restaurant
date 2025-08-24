@@ -17,6 +17,29 @@ import { toast } from 'sonner';
 import { MapPin, CreditCard, Loader2, Plus } from 'lucide-react';
 import { Address } from '@/types/product';
 
+interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  priceAtPurchase: number;
+  taxAmount: number;
+}
+
+interface OrderData {
+  userId: string;
+  companyId: string;
+  items: OrderItem[];
+  totalAmount: number;
+  totalTax: number;
+  status: string;
+  paymentStatus: string;
+  shippingAddress: Address;
+  orderNumber: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface CheckoutFormProps {
   onOrderComplete: () => void;
 }
@@ -24,15 +47,15 @@ interface CheckoutFormProps {
 export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
   const { currentUser } = useAuth();
   const userInfo = useUserInfo();
-  const { items, clearCart, getTotalPrice } = useCartStore();
+  const { items, clearCart, getTotalPrice, getTotalTax } = useCartStore();
   const { products, loading: productsLoading } = useFirebaseProducts();
-  const { addresses, loading: addressesLoading, addAddress, setDefaultAddress } = useFirebaseAddresses(currentUser?.uid);
+  const { addresses, loading: addressesLoading, addAddress, setDefaultAddress } = useFirebaseAddresses(currentUser?.uid ?? '');
   const paths = useFirestorePaths('shopping_cart');
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showNewAddressForm, setShowNewAddressForm] = useState(addresses.length === 0);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
-  const [newAddress, setNewAddress] = useState({
+  const [newAddress, setNewAddress] = useState<Partial<Address>>({
     fullName: userInfo.name || '',
     email: userInfo.email || '',
     phoneNumber: userInfo.mobileNumber || '',
@@ -44,18 +67,23 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
     isDefault: true,
   });
 
-  // Recalculate total using Firestore product data
-  const calculatedTotal = productsLoading ? 0 : getTotalPrice(products);
-  const finalTotal = calculatedTotal + 5 + calculatedTotal * 0.1; // Subtotal + Shipping + Tax (10%)
+  const subtotalWithoutTax = productsLoading ? 0 : getTotalPrice(products);
+  const totalTax = productsLoading ? 0 : getTotalTax(products);
+  const shipping = 5;
+  const finalTotal = subtotalWithoutTax + totalTax + shipping;
+  const subtotalWithoutDiscount = productsLoading ? 0 : items.reduce((total, item) => {
+    const product = products.find((p) => p.productId === item.productId);
+    const price = Number(product?.price || item.price) || 0;
+    return total + price * item.quantity;
+  }, 0);
 
-  // Set default address on load
   useEffect(() => {
     if (!addressesLoading && addresses.length > 0 && !selectedAddressId) {
       const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0];
       setSelectedAddressId(defaultAddress?.addressId || null);
-      setShowNewAddressForm(false); // Hide new address form if addresses exist
+      setShowNewAddressForm(false);
     } else if (!addressesLoading && addresses.length === 0) {
-      setShowNewAddressForm(true); // Show new address form for first-time users
+      setShowNewAddressForm(true);
     }
   }, [addresses, addressesLoading, selectedAddressId]);
 
@@ -72,7 +100,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
       return;
     }
 
-    // Only require selectedAddressId if addresses exist and new address form is not shown
     if (addresses.length > 0 && !showNewAddressForm && !selectedAddressId) {
       toast.error('Please select an address');
       return;
@@ -82,10 +109,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
     let finalAddressId: string | null = selectedAddressId;
 
     if (showNewAddressForm) {
-      // Validate new address fields
       if (
         !newAddress.fullName ||
-        !newAddress.email ||
         !newAddress.phoneNumber ||
         !newAddress.address ||
         !newAddress.city ||
@@ -97,37 +122,33 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         return;
       }
 
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(newAddress.email)) {
-        toast.error('Please enter a valid email address');
-        return;
-      }
-
-      // Basic phone number validation (e.g., 10 digits)
       const phoneRegex = /^\d{10}$/;
       if (!phoneRegex.test(newAddress.phoneNumber)) {
         toast.error('Please enter a valid 10-digit phone number');
         return;
       }
 
+      // Ensure email is a string or null
+      const email = newAddress.email && typeof newAddress.email === 'string' ? newAddress.email : null;
+
       try {
-        console.log('Calling addAddress with:', newAddress);
-        const newAddressDoc = await addAddress(newAddress);
+        console.log('Calling addAddress with:', { ...newAddress, email });
+        const newAddressDoc = await addAddress({ ...newAddress, email } as Address);
         console.log('New address document:', newAddressDoc, 'ID:', newAddressDoc.id);
         finalAddressId = newAddressDoc.id;
         shippingAddress = {
           ...newAddress,
+          email,
           addressId: newAddressDoc.id,
           userId: currentUser.uid,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           companyId: 'shopping_cart',
-        };
+        } as Address;
         await setDefaultAddress(newAddressDoc.id);
-      } catch (err: any) {
-        console.error('Failed to add new address:', err.message, err.code);
-        toast.error(`Failed to add new address: ${err.message}`);
+      } catch (err: unknown) {
+        console.error('Failed to add new address:', err);
+        toast.error(`Failed to add new address: ${err instanceof Error ? err.message : 'Unknown error'}`);
         return;
       }
     } else {
@@ -138,30 +159,34 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
       }
       try {
         await setDefaultAddress(selectedAddressId!);
-      } catch (err: any) {
-        console.error('Failed to set default address:', err.message, err.code);
-        toast.error(`Failed to set default address: ${err.message}`);
+      } catch (err: unknown) {
+        console.error('Failed to set default address:', err);
+        toast.error(`Failed to set default address: ${err instanceof Error ? err.message : 'Unknown error'}`);
         return;
       }
     }
 
     setLoading(true);
     try {
-      const orderData = {
+      const orderData: OrderData = {
         userId: currentUser.uid,
         companyId: 'shopping_cart',
         items: items.map((item) => {
           const product = products.find((p) => p.productId === item.productId);
           const price = Number(product?.discountedPrice || product?.price || item.price) || 0;
+          const taxRate = product?.taxRate || 0;
+          const taxAmount = price * item.quantity * (taxRate / 100);
           return {
             productId: item.productId,
             name: item.name,
             price,
             quantity: item.quantity,
             priceAtPurchase: price,
+            taxAmount,
           };
         }),
         totalAmount: finalTotal,
+        totalTax,
         status: 'pending',
         paymentStatus: 'pending',
         shippingAddress,
@@ -170,23 +195,67 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         updatedAt: new Date().toISOString(),
       };
 
-      console.log('Placing order:', orderData);
+      // Sanitize orderData to remove any undefined fields
+      const sanitizedOrderData: any = {
+        userId: orderData.userId,
+        companyId: orderData.companyId,
+        items: orderData.items.map((item) => ({
+          productId: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          priceAtPurchase: item.priceAtPurchase,
+          taxAmount: item.taxAmount,
+        })),
+        totalAmount: orderData.totalAmount,
+        totalTax: orderData.totalTax,
+        status: orderData.status,
+        paymentStatus: orderData.paymentStatus,
+        shippingAddress: {
+          fullName: orderData.shippingAddress.fullName,
+          address: orderData.shippingAddress.address,
+          city: orderData.shippingAddress.city,
+          state: orderData.shippingAddress.state,
+          zipCode: orderData.shippingAddress.zipCode,
+          country: orderData.shippingAddress.country,
+          phoneNumber: orderData.shippingAddress.phoneNumber,
+          email: orderData.shippingAddress.email && typeof orderData.shippingAddress.email === 'string' ? orderData.shippingAddress.email : null,
+          addressId: orderData.shippingAddress.addressId,
+          userId: orderData.shippingAddress.userId,
+          createdAt: orderData.shippingAddress.createdAt,
+          updatedAt: orderData.shippingAddress.updatedAt,
+          companyId: orderData.shippingAddress.companyId,
+          isDefault: orderData.shippingAddress.isDefault,
+        },
+        orderNumber: orderData.orderNumber,
+        createdAt: orderData.createdAt,
+        updatedAt: orderData.updatedAt,
+      };
 
-      await addDoc(collection(firestore, paths.getOrdersPath()), orderData);
+      console.log('Placing order:', sanitizedOrderData);
 
+      await addDoc(collection(firestore, paths.getOrdersPath()), sanitizedOrderData);
+      console.log('Order placed successfully, clearing cart');
       clearCart();
       toast.success('Order placed successfully!');
-      onOrderComplete();
-      navigate('/order-confirmation', { state: orderData });
-    } catch (error: any) {
-      console.error('Error placing order:', error.message, error.code);
-      toast.error(`Failed to place order: ${error.message}`);
+
+      console.log('Calling onOrderComplete, type:', typeof onOrderComplete);
+      if (typeof onOrderComplete === 'function') {
+        onOrderComplete();
+      } else {
+        console.warn('onOrderComplete is not a function:', onOrderComplete);
+      }
+
+      navigate('/order-confirmation', { state: sanitizedOrderData });
+    } catch (error: unknown) {
+      console.error('Error placing order:', error);
+      toast.error(`Failed to place order: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof Address, value: string) => {
     setNewAddress((prev) => ({
       ...prev,
       [field]: value,
@@ -196,7 +265,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
   const toggleNewAddressForm = () => {
     setShowNewAddressForm(!showNewAddressForm);
     if (!showNewAddressForm) {
-      setSelectedAddressId(null); // Clear selection when showing new address form
+      setSelectedAddressId(null);
     }
   };
 
@@ -220,7 +289,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Saved Addresses */}
             {addresses.length > 0 && (
               <div className="space-y-4">
                 <Label>Select Saved Address</Label>
@@ -260,7 +328,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
               </div>
             )}
 
-            {/* New Address Form */}
             {showNewAddressForm && (
               <div className="space-y-4 border-t pt-4">
                 <h3 className="text-lg font-semibold">
@@ -277,13 +344,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">Email *</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
                       type="email"
-                      value={newAddress.email}
+                      value={newAddress.email || ''}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      required
                     />
                   </div>
                   <div>
@@ -347,22 +413,25 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
               </div>
             )}
 
-            {/* Order Summary */}
             <div className="border-t pt-4 mt-6">
               <div className="flex justify-between items-center mb-4">
-                <span>Subtotal:</span>
-                <span>₹{Number(calculatedTotal).toFixed(2)}</span>
+                <span>Subtotal (without discount):</span>
+                <span>₹{Number(subtotalWithoutDiscount).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center mb-4">
+                <span>Subtotal (with discount):</span>
+                <span>₹{Number(subtotalWithoutTax).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center mb-4">
+                <span>Total Tax:</span>
+                <span>₹{Number(totalTax).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center mb-4">
                 <span>Shipping:</span>
-                <span>₹5.00</span>
+                <span>₹{Number(shipping).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center mb-4">
-                <span>Tax (10%):</span>
-                <span>₹{Number(calculatedTotal * 0.1).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-semibold">Total:</span>
+                <span className="text-lg font-semibold">Final Total:</span>
                 <span className="text-lg font-semibold">₹{Number(finalTotal).toFixed(2)}</span>
               </div>
               <Button

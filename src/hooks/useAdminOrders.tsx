@@ -1,39 +1,17 @@
-
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/config/firebase';
 import { useFirestorePaths } from '@/hooks/useFirestorePaths';
 import { toast } from 'sonner';
-import { Address } from '@/types/product';
+import { Order, OrderItem } from '@/types/product';
 
-interface OrderItem {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  priceAtPurchase: number;
-}
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  customer: {
-    name: string;
-    email: string;
-    phone: string;
-  };
-  items: OrderItem[];
-  totalAmount: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  shippingAddress: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  createdAt: string;
-  deliveryDate?: string;
+interface FirestoreOrderItem {
+  productId?: string;
+  name?: string;
+  price?: number;
+  quantity?: number;
+  priceAtPurchase?: number;
+  taxAmount?: number;
 }
 
 export const useFirebaseAdminOrders = () => {
@@ -46,6 +24,14 @@ export const useFirebaseAdminOrders = () => {
   // Fetch all orders for the company
   useEffect(() => {
     const ordersPath = paths.getOrdersPath();
+    if (!ordersPath) {
+      console.error('Error: Invalid Firestore path for orders');
+      setError('Invalid Firestore path for orders');
+      toast.error('Failed to fetch orders: Invalid path');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onSnapshot(
       collection(firestore, ordersPath),
       (snapshot) => {
@@ -53,24 +39,35 @@ export const useFirebaseAdminOrders = () => {
           const data = doc.data();
           return {
             id: doc.id,
-            orderNumber: data.orderNumber,
+            orderNumber: data.orderNumber || null,
+            userId: data.userId || '',
             customer: {
-              name: data.shippingAddress.fullName,
-              email: data.shippingAddress.email || 'N/A',
-              phone: data.shippingAddress.phoneNumber || 'N/A',
+              name: data.shippingAddress?.fullName || null,
+              email: data.shippingAddress?.email || null,
+              phone: data.shippingAddress?.phoneNumber || null,
             },
-            items: data.items,
-            totalAmount: data.totalAmount,
-            status: data.status,
-            paymentStatus: data.paymentStatus,
+            items: (data.items || []).map((item: FirestoreOrderItem) => ({
+              productId: item.productId || '',
+              name: item.name || 'Unknown',
+              price: item.price || 0,
+              quantity: item.quantity || 0,
+              priceAtPurchase: item.priceAtPurchase || item.price || 0,
+              taxAmount: item.taxAmount || 0,
+            }) as OrderItem),
+            totalAmount: data.totalAmount || 0,
+            totalTax: data.totalTax || 0,
+            status: data.status || 'pending',
+            paymentStatus: data.paymentStatus || 'pending',
             shippingAddress: {
-              street: data.shippingAddress.address,
-              city: data.shippingAddress.city,
-              state: data.shippingAddress.state,
-              zipCode: data.shippingAddress.zipCode,
+              street: data.shippingAddress?.address || '',
+              city: data.shippingAddress?.city || '',
+              state: data.shippingAddress?.state || '',
+              zipCode: data.shippingAddress?.zipCode || '',
             },
-            createdAt: data.createdAt,
-            deliveryDate: data.status === 'delivered' ? data.updatedAt : undefined,
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString(),
+            companyId: data.companyId || 'shopping_cart',
+            deliveryDate: data.status === 'delivered' ? data.updatedAt || undefined : undefined,
           } as Order;
         });
         console.log('Fetched admin orders:', ordersData);
@@ -92,6 +89,9 @@ export const useFirebaseAdminOrders = () => {
   const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
     try {
       const orderPath = paths.getSingleOrderPath(orderId);
+      if (!orderPath) {
+        throw new Error('Invalid Firestore path for order');
+      }
       const orderRef = doc(firestore, orderPath);
       await updateDoc(orderRef, {
         status: newStatus,

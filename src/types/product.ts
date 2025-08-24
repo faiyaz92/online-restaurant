@@ -6,6 +6,7 @@ export interface Product {
   description: string;
   price: number;
   discountedPrice?: number;
+  taxRate: number;
   images: string[];
   categoryId: string;
   subcategoryId?: string;
@@ -19,6 +20,7 @@ export interface ProductVariant {
   size?: string;
   color?: string;
   price?: number;
+  taxRate?: number;
   stock?: number;
 }
 
@@ -42,6 +44,8 @@ export interface CartItem {
   productId: string;
   quantity: number;
   variant?: ProductVariant;
+  priceAtPurchase: number;
+  taxAmount: number;
 }
 
 export interface Cart {
@@ -53,33 +57,53 @@ export interface Cart {
 }
 
 export interface Order {
-  orderId: string;
+  id: string;
+  orderNumber: string | null;
   userId: string;
+  customer: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
   items: OrderItem[];
   totalAmount: number;
-  status: OrderStatus;
-  shippingAddress: ShippingAddress;
-  paymentId?: string;
-  createdAt: Date;
+  totalTax: number;
+  status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  createdAt: string;
+  updatedAt: string;
   companyId: string;
+  deliveryDate?: string;
 }
 
 export interface OrderItem {
   productId: string;
+  name: string;
   quantity: number;
+  price: number;
+  taxAmount: number;
   priceAtPurchase: number;
   variant?: ProductVariant;
 }
 
-export enum OrderStatus {
-  PENDING = 'Pending',
-  CONFIRMED = 'Confirmed',
-  PROCESSING = 'Processing',
-  PACKED = 'Packed',
-  SHIPPED = 'Shipped',
-  OUT_FOR_DELIVERY = 'Out for Delivery',
-  DELIVERED = 'Delivered',
-  CANCELLED = 'Cancelled'
+export interface OrderData {
+  userId: string;
+  companyId: string;
+  items: OrderItem[];
+  totalAmount: number;
+  totalTax: number;
+  status: string;
+  paymentStatus: string;
+  shippingAddress: Address;
+  orderNumber: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ShippingAddress {
@@ -93,7 +117,7 @@ export interface ShippingAddress {
 }
 
 export interface Address extends ShippingAddress {
-  email: ReactNode;
+  email: string | null;
   addressId: string;
   userId: string;
   isDefault: boolean;
@@ -108,4 +132,9 @@ export interface Wishlist {
   productIds: string[];
   updatedAt: Date;
   companyId: string;
+}
+
+export interface Role {
+  ADMIN: 'admin';
+  USER: 'user';
 }

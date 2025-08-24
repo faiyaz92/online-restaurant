@@ -15,30 +15,19 @@ export interface Subcategory {
   companyId: string;
 }
 
-export const useFirebaseSubcategories = (categoryIds?: string | string[]) => {
+export const useFirebaseSubcategories = (categoryId?: string) => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const companyId = 'shopping_cart';
   const paths = useFirestorePaths(companyId);
 
-  const fetchSubcategories = (ids: string[]) => {
+  const fetchSubcategories = (catId: string) => {
     setLoading(true);
-    setError(null);
-
-    // If no category IDs provided, return empty results
-    if (!ids || ids.length === 0) {
-      setSubcategories([]);
-      setLoading(false);
-      return () => {};
-    }
-
-    // Use 'in' query for up to 10 category IDs (Firestore limit)
     const q = query(
       collection(firestore, paths.getSubcategoryPath()),
-      where('categoryId', 'in', ids)
+      where('categoryId', '==', catId)
     );
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -66,22 +55,17 @@ export const useFirebaseSubcategories = (categoryIds?: string | string[]) => {
         setLoading(false);
       }
     );
-
-    return unsubscribe;
+    return () => unsubscribe();
   };
 
   useEffect(() => {
-    // Normalize categoryIds to an array
-    const ids = Array.isArray(categoryIds) ? categoryIds : categoryIds ? [categoryIds] : [];
-    
-    if (ids.length === 0) {
+    if (!categoryId) {
       setSubcategories([]);
       setLoading(false);
       return;
     }
-
-    return fetchSubcategories(ids);
-  }, [categoryIds, paths]);
+    return fetchSubcategories(categoryId);
+  }, [categoryId, paths]);
 
   const addSubcategory = async (subcategoryData: Omit<Subcategory, 'id' | 'createdAt' | 'updatedAt' | 'companyId'>) => {
     try {

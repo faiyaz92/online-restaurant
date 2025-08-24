@@ -1,4 +1,5 @@
 import React from 'react';
+import { Product, Category } from '@/types/product';
 import { ProductCard } from './ProductCard';
 import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
 
@@ -6,12 +7,14 @@ interface ProductGridProps {
   searchTerm: string;
   selectedCategories: string[];
   selectedSubcategories: string[];
+  categories: Category[];
 }
 
 export const ProductGrid: React.FC<ProductGridProps> = ({
   searchTerm,
   selectedCategories,
   selectedSubcategories,
+  categories,
 }) => {
   const { products, loading } = useFirebaseProducts();
 
@@ -31,6 +34,19 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     return matchesSearch && matchesCategory && matchesSubcategory;
   });
 
+  const productsByCategory = filteredProducts.reduce((acc, product) => {
+    const categoryId = product.categoryId;
+    if (!acc[categoryId]) {
+      acc[categoryId] = [];
+    }
+    acc[categoryId].push(product);
+    return acc;
+  }, {} as Record<string, Product[]>);
+
+  const sortedCategoryIds = categories
+    .filter((cat) => productsByCategory[cat.categoryId]?.length > 0)
+    .map((cat) => cat.categoryId);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -45,21 +61,31 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
         <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
           <div className="text-4xl">📦</div>
         </div>
-        <h3 className="text-lg font-semibold mb-2">No products found</h3>
-        <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
+        <h3 className="text-lg font-semibold text-foreground mb-2">No products found</h3>
+        <p className="text-sm text-muted-foreground">Try adjusting your search or filter criteria</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {filteredProducts.map((product) => (
-        <ProductCard
-          key={product.productId}
-          product={product}
-          onProductClick={() => {}}
-        />
-      ))}
+    <div className="space-y-6 px-3 py-3">
+      {sortedCategoryIds.map((categoryId) => {
+        const category = categories.find((cat) => cat.categoryId === categoryId);
+        return (
+          <div key={categoryId} className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground">{category?.name || 'Uncategorized'}</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {productsByCategory[categoryId].map((product) => (
+                <ProductCard
+                  key={product.productId}
+                  product={product}
+                  onProductClick={() => {}}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

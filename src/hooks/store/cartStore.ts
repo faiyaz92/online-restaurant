@@ -1,4 +1,3 @@
-// src/store/cartStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Product } from '@/types/product';
@@ -10,6 +9,7 @@ export interface CartItem {
   price: number;
   image?: string;
   quantity: number;
+  taxAmount: number; // Added taxAmount
 }
 
 interface CartStore {
@@ -20,6 +20,7 @@ interface CartStore {
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: (products: Product[]) => number;
+  getTotalTax: (products: Product[]) => number;
   total: number;
 }
 
@@ -33,12 +34,13 @@ export const useCartStore = create<CartStore>()(
           productId: product.productId,
           name: product.name,
           price: product.discountedPrice || product.price,
-          discountedPrice: product.discountedPrice,
-          originalPrice: product.price,
+          taxRate: product.taxRate,
         });
         set((state) => {
           const existingItem = state.items.find((item) => item.productId === product.productId);
           const price = Number(product.discountedPrice || product.price) || 0;
+          const taxRate = product.taxRate || 0;
+          const taxAmount = price * quantity * (taxRate / 100);
 
           if (price === 0) {
             console.warn(`Warning: Product ${product.productId} has invalid price:`, {
@@ -48,10 +50,12 @@ export const useCartStore = create<CartStore>()(
           }
 
           if (existingItem) {
+            const newQuantity = existingItem.quantity + quantity;
+            const newTaxAmount = price * newQuantity * (taxRate / 100);
             return {
               items: state.items.map((item) =>
                 item.productId === product.productId
-                  ? { ...item, quantity: item.quantity + quantity }
+                  ? { ...item, quantity: newQuantity, taxAmount: newTaxAmount }
                   : item
               ),
             };
@@ -67,6 +71,7 @@ export const useCartStore = create<CartStore>()(
                 price,
                 image: product.images?.[0] || '/placeholder.svg',
                 quantity,
+                taxAmount,
               },
             ],
           };
@@ -85,9 +90,15 @@ export const useCartStore = create<CartStore>()(
           return;
         }
         set((state) => ({
-          items: state.items.map((item) =>
-            item.productId === productId ? { ...item, quantity } : item
-          ),
+          items: state.items.map((item) => {
+            if (item.productId === productId) {
+              const product = state.items.find((i) => i.productId === productId);
+              const price = product?.price || 0;
+              const taxRate = product ? (state.items.find((i) => i.productId === productId)?.taxAmount || 0) / (price * item.quantity / 100) : 0;
+              return { ...item, quantity, taxAmount: price * quantity * (taxRate / 100) };
+            }
+            return item;
+          }),
         }));
       },
 
@@ -106,6 +117,17 @@ export const useCartStore = create<CartStore>()(
           const price = Number(product?.discountedPrice || product?.price || item.price) || 0;
           console.log('Calculating total for item:', { productId: item.productId, price, quantity: item.quantity });
           return total + price * item.quantity;
+        }, 0);
+      },
+
+      getTotalTax: (products: Product[]) => {
+        const { items } = get();
+        return items.reduce((total, item) => {
+          const product = products.find((p) => p.productId === item.productId);
+          const price = Number(product?.discountedPrice || product?.price || item.price) || 0;
+          const taxRate = product?.taxRate || 0;
+          const taxAmount = price * item.quantity * (taxRate / 100);
+          return total + taxAmount;
         }, 0);
       },
 

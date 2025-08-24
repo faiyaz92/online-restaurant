@@ -51,18 +51,20 @@ import { Role } from '@/types/auth';
 
 interface Order {
   id: string;
-  orderNumber: string;
+  orderNumber: string | null;
   customer: {
-    name: string;
-    email: string;
-    phone: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
   };
   items: {
     name: string;
     quantity: number;
     price: number;
+    taxAmount: number;
   }[];
   totalAmount: number;
+  totalTax: number;
   status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   shippingAddress: {
@@ -122,16 +124,18 @@ export const OrderManager: React.FC = () => {
     { value: 'cancelled', label: 'Cancelled' }
   ];
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const filteredOrders = orders
+    .filter(order => {
+      const matchesSearch = 
+        (order.orderNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (order.customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (order.customer.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const getStatusBadge = (status: Order['status']) => {
     const variants = {
@@ -179,6 +183,7 @@ export const OrderManager: React.FC = () => {
   };
 
   const handleViewOrder = (order: Order) => {
+    console.log('Viewing order:', order);
     setSelectedOrder(order);
     setIsDetailDialogOpen(true);
   };
@@ -197,7 +202,6 @@ export const OrderManager: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
         <Header
-          onCartClick={handleCartClick}
           onLogin={handleLogin}
           onLogout={logout}
           onAdminClick={handleAdminClick}
@@ -218,7 +222,6 @@ export const OrderManager: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
         <Header
-          onCartClick={handleCartClick}
           onLogin={handleLogin}
           onLogout={logout}
           onAdminClick={handleAdminClick}
@@ -236,7 +239,6 @@ export const OrderManager: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
         <Header
-          onCartClick={handleCartClick}
           onLogin={handleLogin}
           onLogout={logout}
           onAdminClick={handleAdminClick}
@@ -256,7 +258,6 @@ export const OrderManager: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Header
-        onCartClick={handleCartClick}
         onLogin={handleLogin}
         onLogout={logout}
         onAdminClick={handleAdminClick}
@@ -318,6 +319,7 @@ export const OrderManager: React.FC = () => {
                   <TableHead>Customer</TableHead>
                   <TableHead>Items</TableHead>
                   <TableHead>Total</TableHead>
+                  <TableHead>Tax</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Date</TableHead>
@@ -328,13 +330,13 @@ export const OrderManager: React.FC = () => {
                 {filteredOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">
-                      {order.orderNumber}
+                      {order.orderNumber || 'N/A'}
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{order.customer.name}</div>
+                        <div className="font-medium">{order.customer.name || 'N/A'}</div>
                         <div className="text-sm text-muted-foreground">
-                          {order.customer.email}
+                          {order.customer.email || 'N/A'}
                         </div>
                       </div>
                     </TableCell>
@@ -354,6 +356,9 @@ export const OrderManager: React.FC = () => {
                     </TableCell>
                     <TableCell className="font-medium">
                       ₹{order.totalAmount.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      ₹{(order.totalTax || 0).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(order.status)}
@@ -405,7 +410,7 @@ export const OrderManager: React.FC = () => {
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>
-                Order Details - {selectedOrder?.orderNumber}
+                Order Details - {selectedOrder?.orderNumber || 'N/A'}
               </DialogTitle>
               <DialogDescription>
                 Complete order information and management options
@@ -422,13 +427,13 @@ export const OrderManager: React.FC = () => {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <div>
-                        <span className="font-medium">Name:</span> {selectedOrder.customer.name}
+                        <span className="font-medium">Name:</span> {selectedOrder.customer.name || 'N/A'}
                       </div>
                       <div>
-                        <span className="font-medium">Email:</span> {selectedOrder.customer.email}
+                        <span className="font-medium">Email:</span> {selectedOrder.customer.email || 'N/A'}
                       </div>
                       <div>
-                        <span className="font-medium">Phone:</span> {selectedOrder.customer.phone}
+                        <span className="font-medium">Phone:</span> {selectedOrder.customer.phone || 'N/A'}
                       </div>
                     </CardContent>
                   </Card>
@@ -438,9 +443,9 @@ export const OrderManager: React.FC = () => {
                       <CardTitle className="text-lg">Shipping Address</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <div>{selectedOrder.shippingAddress.street}</div>
+                      <div>{selectedOrder.shippingAddress.street || 'N/A'}</div>
                       <div>
-                        {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zipCode}
+                        {selectedOrder.shippingAddress.city || 'N/A'}, {selectedOrder.shippingAddress.state || 'N/A'} {selectedOrder.shippingAddress.zipCode || 'N/A'}
                       </div>
                     </CardContent>
                   </Card>
@@ -458,22 +463,39 @@ export const OrderManager: React.FC = () => {
                           <TableHead>Product</TableHead>
                           <TableHead>Quantity</TableHead>
                           <TableHead>Price</TableHead>
+                          <TableHead>Tax</TableHead>
                           <TableHead className="text-right">Total</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedOrder.items.map((item, index) => (
                           <TableRow key={index}>
-                            <TableCell>{item.name}</TableCell>
+                            <TableCell>{item.name || 'N/A'}</TableCell>
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>₹{item.price.toFixed(2)}</TableCell>
+                            <TableCell>₹{(item.taxAmount || 0).toFixed(2)}</TableCell>
                             <TableCell className="text-right">
                               ₹{(item.quantity * item.price).toFixed(2)}
                             </TableCell>
                           </TableRow>
                         ))}
                         <TableRow>
-                          <TableCell colSpan={3} className="font-medium">Total</TableCell>
+                          <TableCell colSpan={3} className="font-medium">Subtotal</TableCell>
+                          <TableCell className="font-medium">
+                            ₹{(selectedOrder.items.reduce((sum, item) => sum + (item.taxAmount || 0), 0)).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            ₹{(selectedOrder.items.reduce((sum, item) => sum + item.quantity * item.price, 0)).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={4} className="font-medium">Total Tax</TableCell>
+                          <TableCell className="text-right font-medium">
+                            ₹{(selectedOrder.totalTax || 0).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={4} className="font-medium">Total</TableCell>
                           <TableCell className="text-right font-medium">
                             ₹{selectedOrder.totalAmount.toFixed(2)}
                           </TableCell>

@@ -54,6 +54,7 @@ export const ProductManager = () => {
     description: '',
     price: '',
     discountedPrice: '',
+    taxRate: '', // Added taxRate to formData
     categoryId: '',
     subcategoryId: '',
     stock: '',
@@ -78,8 +79,7 @@ export const ProductManager = () => {
   useEffect(() => {
     if (isAddDialogOpen) {
       console.log('Add Dialog opened, categories state:', { categories, categoriesLoading });
-      // Reset subcategory when dialog opens to ensure consistency
-      setFormData((prev) => ({ ...prev, categoryId: '', subcategoryId: '' }));
+      setFormData((prev) => ({ ...prev, categoryId: '', subcategoryId: '', taxRate: '' }));
     }
   }, [isAddDialogOpen, categories, categoriesLoading]);
 
@@ -107,6 +107,7 @@ export const ProductManager = () => {
         description: formData.description,
         price: parseFloat(formData.price),
         discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice) : undefined,
+        taxRate: formData.taxRate ? parseFloat(formData.taxRate) : 0, // Added taxRate
         categoryId: formData.categoryId,
         subcategoryId: formData.subcategoryId === 'none' ? undefined : formData.subcategoryId,
         stock: parseInt(formData.stock) || 0,
@@ -132,6 +133,7 @@ export const ProductManager = () => {
       description: product.description,
       price: product.price.toString(),
       discountedPrice: product.discountedPrice?.toString() || '',
+      taxRate: product.taxRate?.toString() || '', // Added taxRate
       categoryId: product.categoryId,
       subcategoryId: product.subcategoryId || 'none',
       stock: product.stock.toString(),
@@ -147,7 +149,7 @@ export const ProductManager = () => {
   const handleUpdateProduct = async () => {
     if (!editingProduct || !formData.name || !formData.price || !formData.categoryId) {
       toast.error('Please fill in all required fields (Name, Price, Category)');
-          return;
+      return;
     }
 
     try {
@@ -158,6 +160,7 @@ export const ProductManager = () => {
         description: formData.description,
         price: parseFloat(formData.price),
         discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice) : undefined,
+        taxRate: formData.taxRate ? parseFloat(formData.taxRate) : 0, // Added taxRate
         categoryId: formData.categoryId,
         subcategoryId: formData.subcategoryId === 'none' ? undefined : formData.subcategoryId,
         stock: parseInt(formData.stock) || 0,
@@ -195,6 +198,7 @@ export const ProductManager = () => {
       description: '',
       price: '',
       discountedPrice: '',
+      taxRate: '', // Added taxRate
       categoryId: '',
       subcategoryId: '',
       stock: '',
@@ -350,6 +354,18 @@ export const ProductManager = () => {
                     step="0.01"
                     value={formData.discountedPrice}
                     onChange={(e) => setFormData({ ...formData, discountedPrice: e.target.value })}
+                    placeholder="0.00"
+                    className="border border-gray-300 p-2 rounded"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                  <Input
+                    id="taxRate"
+                    type="number"
+                    step="0.01"
+                    value={formData.taxRate}
+                    onChange={(e) => setFormData({ ...formData, taxRate: e.target.value })}
                     placeholder="0.00"
                     className="border border-gray-300 p-2 rounded"
                   />
@@ -542,6 +558,9 @@ export const ProductManager = () => {
                       ) : (
                         <span className="font-bold text-sm">${product.price}</span>
                       )}
+                      {product.taxRate > 0 && (
+                        <span className="text-xs text-muted-foreground">+ {product.taxRate}% Tax</span>
+                      )}
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className="text-xs">
@@ -685,6 +704,18 @@ export const ProductManager = () => {
                   step="0.01"
                   value={formData.discountedPrice}
                   onChange={(e) => setFormData({ ...formData, discountedPrice: e.target.value })}
+                  placeholder="0.00"
+                  className="border border-gray-300 p-2 rounded"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-taxRate">Tax Rate (%)</Label>
+                <Input
+                  id="edit-taxRate"
+                  type="number"
+                  step="0.01"
+                  value={formData.taxRate}
+                  onChange={(e) => setFormData({ ...formData, taxRate: e.target.value })}
                   placeholder="0.00"
                   className="border border-gray-300 p-2 rounded"
                 />
