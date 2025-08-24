@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { Category } from '@/types/product';
 import { useFirebaseSubcategories } from '@/hooks/useFirebaseSubcategories';
 import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
@@ -27,6 +27,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
 }) => {
   const { products } = useFirebaseProducts();
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
 
   // Fetch subcategories for up to 10 categories
   const { subcategories: sub1, loading: load1, error: err1 } = useFirebaseSubcategories(categories[0]?.categoryId);
@@ -71,13 +72,22 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
     onSubcategoryChange(newSelected);
   };
 
+  const handleToggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
   const handleClearFilters = () => {
     setSearchQuery('');
+    setExpandedCategories([]);
     onClearFilters();
   };
 
   return (
-    <div className="h-full w-64 bg-background border-r flex flex-col mt-0 pt-0">
+    <div className="h-full flex flex-col">
       {/* Search Bar */}
       <div className="px-3 pt-3 pb-2">
         <div className="relative">
@@ -132,6 +142,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
             const filteredSubcategories = subcategoryData.subcategories.filter((sub) =>
               sub.name.toLowerCase().includes(searchQuery.toLowerCase())
             );
+            const isExpanded = expandedCategories.includes(category.categoryId);
 
             return (
               <div key={category.categoryId} className="space-y-1">
@@ -139,41 +150,51 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
                   variant={selectedCategories.includes(category.categoryId) ? 'default' : 'ghost'}
                   size="sm"
                   className="w-full justify-between text-sm h-8 rounded-md"
-                  onClick={() => handleCategoryClick(category.categoryId)}
+                  onClick={() => {
+                    handleCategoryClick(category.categoryId);
+                    handleToggleCategory(category.categoryId);
+                  }}
                 >
                   <span>{category.name}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {productCount}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {productCount}
+                    </Badge>
+                    {filteredSubcategories.length > 0 && (
+                      isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
                 </Button>
 
-                <div className="ml-3 space-y-1">
-                  {subcategoryData.error && (
-                    <p className="text-xs text-red-600">{subcategoryData.error}</p>
-                  )}
-                  {subcategoryData.loading ? (
-                    <div className="flex items-center justify-center py-1">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
-                    </div>
-                  ) : filteredSubcategories.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No subcategories</p>
-                  ) : (
-                    filteredSubcategories.map((subcategory) => (
-                      <Button
-                        key={subcategory.id}
-                        variant={selectedSubcategories.includes(subcategory.id) ? 'default' : 'ghost'}
-                        size="sm"
-                        className="w-full justify-between text-xs h-7 rounded-md"
-                        onClick={() => handleSubcategoryClick(subcategory.id)}
-                      >
-                        <span>{subcategory.name}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {products.filter((p) => p.subcategoryId === subcategory.id).length}
-                        </Badge>
-                      </Button>
-                    ))
-                  )}
-                </div>
+                {isExpanded && (
+                  <div className="ml-3 space-y-1">
+                    {subcategoryData.error && (
+                      <p className="text-xs text-red-600">{subcategoryData.error}</p>
+                    )}
+                    {subcategoryData.loading ? (
+                      <div className="flex items-center justify-center py-1">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                      </div>
+                    ) : filteredSubcategories.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No subcategories</p>
+                    ) : (
+                      filteredSubcategories.map((subcategory) => (
+                        <Button
+                          key={subcategory.id}
+                          variant={selectedSubcategories.includes(subcategory.id) ? 'default' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-between text-xs h-7 rounded-md"
+                          onClick={() => handleSubcategoryClick(subcategory.id)}
+                        >
+                          <span>{subcategory.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {products.filter((p) => p.subcategoryId === subcategory.id).length}
+                          </Badge>
+                        </Button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
