@@ -68,6 +68,10 @@ export interface Order {
   items: OrderItem[];
   totalAmount: number;
   totalTax: number;
+  shippingCharge: number;
+  priceWithoutDiscount: number;
+  priceWithDiscount: number;
+  priceWithDiscountTaxShipping: number;
   status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   shippingAddress: {
@@ -89,6 +93,7 @@ export interface OrderItem {
   price: number;
   taxAmount: number;
   priceAtPurchase: number;
+  originalPrice: number;
   variant?: ProductVariant;
 }
 
@@ -98,6 +103,10 @@ export interface OrderData {
   items: OrderItem[];
   totalAmount: number;
   totalTax: number;
+  shippingCharge: number;
+  priceWithoutDiscount: number;
+  priceWithDiscount: number;
+  priceWithDiscountTaxShipping: number;
   status: string;
   paymentStatus: string;
   shippingAddress: Address;

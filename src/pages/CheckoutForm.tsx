@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCartStore } from '@/hooks/store/cartStore';
 import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
+import { useFirebaseSettings } from '@/hooks/useFirebaseSettings';
 import { useFirebaseAddresses } from '@/hooks/useAddress';
 import { addDoc, collection } from 'firebase/firestore';
 import { firestore } from '@/config/firebase';
@@ -15,23 +16,20 @@ import { useFirestorePaths } from '@/hooks/useFirestorePaths';
 import { useUserInfo } from '@/hooks/useUserInfo';
 import { toast } from 'sonner';
 import { MapPin, CreditCard, Loader2, Plus } from 'lucide-react';
-import { Address } from '@/types/product';
-
-interface OrderItem {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  priceAtPurchase: number;
-  taxAmount: number;
-}
+import { Header } from '@/components/shopping/Header'; // Added Header import
+import { Footer } from '@/components/shopping/Footer';
+import { Address, OrderItem as OrderItemType } from '@/types/product';
 
 interface OrderData {
   userId: string;
   companyId: string;
-  items: OrderItem[];
+  items: OrderItemType[];
   totalAmount: number;
   totalTax: number;
+  shippingCharge: number;
+  priceWithoutDiscount: number;
+  priceWithDiscount: number;
+  priceWithDiscountTaxShipping: number;
   status: string;
   paymentStatus: string;
   shippingAddress: Address;
@@ -45,10 +43,11 @@ interface CheckoutFormProps {
 }
 
 export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth(); // Added logout for Header
   const userInfo = useUserInfo();
   const { items, clearCart, getTotalPrice, getTotalTax } = useCartStore();
   const { products, loading: productsLoading } = useFirebaseProducts();
+  const { settings, loading: settingsLoading } = useFirebaseSettings();
   const { addresses, loading: addressesLoading, addAddress, setDefaultAddress } = useFirebaseAddresses(currentUser?.uid ?? '');
   const paths = useFirestorePaths('shopping_cart');
   const navigate = useNavigate();
@@ -67,15 +66,16 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
     isDefault: true,
   });
 
-  const subtotalWithoutTax = productsLoading ? 0 : getTotalPrice(products);
+  const priceWithDiscount = productsLoading ? 0 : getTotalPrice(products);
   const totalTax = productsLoading ? 0 : getTotalTax(products);
-  const shipping = 5;
-  const finalTotal = subtotalWithoutTax + totalTax + shipping;
-  const subtotalWithoutDiscount = productsLoading ? 0 : items.reduce((total, item) => {
+  const shipping = settingsLoading ? 0 : settings?.shippingCharge || 0;
+  const priceWithoutDiscount = productsLoading ? 0 : items.reduce((total, item) => {
     const product = products.find((p) => p.productId === item.productId);
     const price = Number(product?.price || item.price) || 0;
     return total + price * item.quantity;
   }, 0);
+  const priceWithDiscountTaxShipping = priceWithDiscount + totalTax + shipping;
+  const finalTotal = priceWithDiscountTaxShipping;
 
   useEffect(() => {
     if (!addressesLoading && addresses.length > 0 && !selectedAddressId) {
@@ -128,8 +128,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         return;
       }
 
-      // Ensure email is a string or null
-      const email = newAddress.email && typeof newAddress.email === 'string' ? newAddress.email : null;
+      const email = newAddress.email && typeof newAddress.email === 'string' && newAddress.email.trim() !== '' ? newAddress.email.trim() : null;
 
       try {
         console.log('Calling addAddress with:', { ...newAddress, email });
@@ -144,6 +143,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           companyId: 'shopping_cart',
+          isDefault: true,
         } as Address;
         await setDefaultAddress(newAddressDoc.id);
       } catch (err: unknown) {
@@ -157,6 +157,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         toast.error('Please select a valid address');
         return;
       }
+      shippingAddress = {
+        ...shippingAddress,
+        email: shippingAddress.email && typeof shippingAddress.email === 'string' && shippingAddress.email.trim() !== '' ? shippingAddress.email.trim() : null,
+      };
       try {
         await setDefaultAddress(selectedAddressId!);
       } catch (err: unknown) {
@@ -174,6 +178,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         items: items.map((item) => {
           const product = products.find((p) => p.productId === item.productId);
           const price = Number(product?.discountedPrice || product?.price || item.price) || 0;
+          const originalPrice = Number(product?.price || item.price) || 0;
           const taxRate = product?.taxRate || 0;
           const taxAmount = price * item.quantity * (taxRate / 100);
           return {
@@ -183,10 +188,15 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
             quantity: item.quantity,
             priceAtPurchase: price,
             taxAmount,
+            originalPrice,
           };
         }),
         totalAmount: finalTotal,
         totalTax,
+        shippingCharge: shipping,
+        priceWithoutDiscount,
+        priceWithDiscount,
+        priceWithDiscountTaxShipping,
         status: 'pending',
         paymentStatus: 'pending',
         shippingAddress,
@@ -195,7 +205,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         updatedAt: new Date().toISOString(),
       };
 
-      // Sanitize orderData to remove any undefined fields
       const sanitizedOrderData: any = {
         userId: orderData.userId,
         companyId: orderData.companyId,
@@ -206,9 +215,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
           quantity: item.quantity,
           priceAtPurchase: item.priceAtPurchase,
           taxAmount: item.taxAmount,
+          originalPrice: item.originalPrice,
         })),
         totalAmount: orderData.totalAmount,
         totalTax: orderData.totalTax,
+        shippingCharge: orderData.shippingCharge,
+        priceWithoutDiscount: orderData.priceWithoutDiscount,
+        priceWithDiscount: orderData.priceWithDiscount,
+        priceWithDiscountTaxShipping: orderData.priceWithDiscountTaxShipping,
         status: orderData.status,
         paymentStatus: orderData.paymentStatus,
         shippingAddress: {
@@ -219,7 +233,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
           zipCode: orderData.shippingAddress.zipCode,
           country: orderData.shippingAddress.country,
           phoneNumber: orderData.shippingAddress.phoneNumber,
-          email: orderData.shippingAddress.email && typeof orderData.shippingAddress.email === 'string' ? orderData.shippingAddress.email : null,
+          email: orderData.shippingAddress.email && typeof orderData.shippingAddress.email === 'string' && orderData.shippingAddress.email.trim() !== '' ? orderData.shippingAddress.email.trim() : null,
           addressId: orderData.shippingAddress.addressId,
           userId: orderData.shippingAddress.userId,
           createdAt: orderData.shippingAddress.createdAt,
@@ -269,193 +283,227 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
     }
   };
 
-  if (productsLoading || addressesLoading) {
+  const handleLogin = () => {
+    navigate('/login');
+  };
+
+  const handleOrdersClick = () => {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+    navigate('/orders');
+  };
+
+  if (productsLoading || settingsLoading || addressesLoading) {
     return (
-      <div className="max-w-2xl mx-auto p-6 text-center">
-        <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-        <p className="mt-2 text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+        <Header
+          onLogin={handleLogin}
+          onLogout={logout}
+          onAdminClick={() => navigate('/admin')}
+          onOrdersClick={handleOrdersClick}
+        />
+        <div className="max-w-2xl mx-auto p-6 text-center flex-grow">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Shipping Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {addresses.length > 0 && (
-              <div className="space-y-4">
-                <Label>Select Saved Address</Label>
-                <div className="space-y-2">
-                  {addresses.map((addr) => (
-                    <div key={addr.addressId} className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 transition-colors">
-                      <input
-                        type="radio"
-                        id={addr.addressId}
-                        name="address"
-                        checked={selectedAddressId === addr.addressId}
-                        onChange={() => setSelectedAddressId(addr.addressId)}
-                        className="h-4 w-4"
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+      <Header
+        onLogin={handleLogin}
+        onLogout={logout}
+        onAdminClick={() => navigate('/admin')}
+        onOrdersClick={handleOrdersClick}
+      />
+      <div className="max-w-2xl mx-auto p-6 flex-grow">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Shipping Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {addresses.length > 0 && (
+                <div className="space-y-4">
+                  <Label>Select Saved Address</Label>
+                  <div className="space-y-2">
+                    {addresses.map((addr) => (
+                      <div key={addr.addressId} className="flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 transition-colors">
+                        <input
+                          type="radio"
+                          id={addr.addressId}
+                          name="address"
+                          checked={selectedAddressId === addr.addressId}
+                          onChange={() => setSelectedAddressId(addr.addressId)}
+                          className="h-4 w-4"
+                        />
+                        <label htmlFor={addr.addressId} className="flex-1 cursor-pointer">
+                          <p className="font-medium">{addr.fullName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {addr.address}, {addr.city}, {addr.state} {addr.zipCode}, {addr.country}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{addr.phoneNumber}</p>
+                          {addr.isDefault && (
+                            <span className="text-xs text-primary font-semibold">Default</span>
+                          )}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={toggleNewAddressForm}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {showNewAddressForm ? 'Cancel New Address' : 'Add New Address'}
+                  </Button>
+                </div>
+              )}
+
+              {showNewAddressForm && (
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="text-lg font-semibold">
+                    {addresses.length === 0 ? 'Enter Shipping Address' : 'Add New Address'}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fullName">Full Name *</Label>
+                      <Input
+                        id="fullName"
+                        value={newAddress.fullName || ''}
+                        onChange={(e) => handleInputChange('fullName', e.target.value)}
+                        required
                       />
-                      <label htmlFor={addr.addressId} className="flex-1 cursor-pointer">
-                        <p className="font-medium">{addr.fullName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {addr.address}, {addr.city}, {addr.state} {addr.zipCode}, {addr.country}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{addr.phoneNumber}</p>
-                        {addr.isDefault && (
-                          <span className="text-xs text-primary font-semibold">Default</span>
-                        )}
-                      </label>
                     </div>
-                  ))}
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newAddress.email || ''}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="phoneNumber">Phone Number *</Label>
+                      <Input
+                        id="phoneNumber"
+                        value={newAddress.phoneNumber || ''}
+                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="city">City *</Label>
+                      <Input
+                        id="city"
+                        value={newAddress.city || ''}
+                        onChange={(e) => handleInputChange('city', e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="address">Address *</Label>
+                    <Textarea
+                      id="address"
+                      value={newAddress.address || ''}
+                      onChange={(e) => handleInputChange('address', e.target.value)}
+                      placeholder="Enter your full address"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="state">State *</Label>
+                      <Input
+                        id="state"
+                        value={newAddress.state || ''}
+                        onChange={(e) => handleInputChange('state', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="zipCode">ZIP Code *</Label>
+                      <Input
+                        id="zipCode"
+                        value={newAddress.zipCode || ''}
+                        onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="country">Country</Label>
+                      <Input
+                        id="country"
+                        value={newAddress.country || ''}
+                        onChange={(e) => handleInputChange('country', e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t pt-4 mt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <span>Subtotal (without discount):</span>
+                  <span>₹{Number(priceWithoutDiscount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span>Subtotal (with discount):</span>
+                  <span>₹{Number(priceWithDiscount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span>Total Tax:</span>
+                  <span>₹{Number(totalTax).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span>Shipping:</span>
+                  <span>₹{Number(shipping).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span>Subtotal (with discount, tax, shipping):</span>
+                  <span>₹{Number(priceWithDiscountTaxShipping).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-lg font-semibold">Final Total:</span>
+                  <span className="text-lg font-semibold">₹{Number(finalTotal).toFixed(2)}</span>
                 </div>
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={toggleNewAddressForm}
+                  type="submit"
                   className="w-full"
+                  disabled={loading || items.length === 0 || productsLoading || settingsLoading || addressesLoading}
+                  size="lg"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {showNewAddressForm ? 'Cancel New Address' : 'Add New Address'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Place Order
+                    </>
+                  )}
                 </Button>
               </div>
-            )}
-
-            {showNewAddressForm && (
-              <div className="space-y-4 border-t pt-4">
-                <h3 className="text-lg font-semibold">
-                  {addresses.length === 0 ? 'Enter Shipping Address' : 'Add New Address'}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="fullName">Full Name *</Label>
-                    <Input
-                      id="fullName"
-                      value={newAddress.fullName}
-                      onChange={(e) => handleInputChange('fullName', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newAddress.email || ''}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phoneNumber">Phone Number *</Label>
-                    <Input
-                      id="phoneNumber"
-                      value={newAddress.phoneNumber}
-                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="city">City *</Label>
-                    <Input
-                      id="city"
-                      value={newAddress.city}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="address">Address *</Label>
-                  <Textarea
-                    id="address"
-                    value={newAddress.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    placeholder="Enter your full address"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="state">State *</Label>
-                    <Input
-                      id="state"
-                      value={newAddress.state}
-                      onChange={(e) => handleInputChange('state', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="zipCode">ZIP Code *</Label>
-                    <Input
-                      id="zipCode"
-                      value={newAddress.zipCode}
-                      onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                      id="country"
-                      value={newAddress.country}
-                      onChange={(e) => handleInputChange('country', e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="border-t pt-4 mt-6">
-              <div className="flex justify-between items-center mb-4">
-                <span>Subtotal (without discount):</span>
-                <span>₹{Number(subtotalWithoutDiscount).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center mb-4">
-                <span>Subtotal (with discount):</span>
-                <span>₹{Number(subtotalWithoutTax).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center mb-4">
-                <span>Total Tax:</span>
-                <span>₹{Number(totalTax).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center mb-4">
-                <span>Shipping:</span>
-                <span>₹{Number(shipping).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-semibold">Final Total:</span>
-                <span className="text-lg font-semibold">₹{Number(finalTotal).toFixed(2)}</span>
-              </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading || items.length === 0 || productsLoading || addressesLoading}
-                size="lg"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Place Order
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+      <Footer />
     </div>
   );
 };

@@ -62,9 +62,14 @@ interface Order {
     quantity: number;
     price: number;
     taxAmount: number;
+    originalPrice: number;
   }[];
   totalAmount: number;
   totalTax: number;
+  shippingCharge: number;
+  priceWithoutDiscount: number;
+  priceWithDiscount: number;
+  priceWithDiscountTaxShipping: number;
   status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   shippingAddress: {
@@ -273,7 +278,6 @@ export const OrderManager: React.FC = () => {
           </div>
         </div>
 
-        {/* Filters */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex gap-4 items-center">
@@ -303,7 +307,6 @@ export const OrderManager: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Orders Table */}
         <Card>
           <CardHeader>
             <CardTitle>Orders ({filteredOrders.length})</CardTitle>
@@ -320,6 +323,7 @@ export const OrderManager: React.FC = () => {
                   <TableHead>Items</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Tax</TableHead>
+                  <TableHead>Shipping</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Date</TableHead>
@@ -359,6 +363,9 @@ export const OrderManager: React.FC = () => {
                     </TableCell>
                     <TableCell className="font-medium">
                       ₹{(order.totalTax || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      ₹{(order.shippingCharge || 0).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(order.status)}
@@ -405,7 +412,6 @@ export const OrderManager: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Order Detail Dialog */}
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -419,7 +425,6 @@ export const OrderManager: React.FC = () => {
             
             {selectedOrder && (
               <div className="grid gap-6">
-                {/* Order Summary */}
                 <div className="grid grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
@@ -451,7 +456,6 @@ export const OrderManager: React.FC = () => {
                   </Card>
                 </div>
 
-                {/* Order Items */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">Order Items</CardTitle>
@@ -462,6 +466,7 @@ export const OrderManager: React.FC = () => {
                         <TableRow>
                           <TableHead>Product</TableHead>
                           <TableHead>Quantity</TableHead>
+                          <TableHead>Original Price</TableHead>
                           <TableHead>Price</TableHead>
                           <TableHead>Tax</TableHead>
                           <TableHead className="text-right">Total</TableHead>
@@ -472,6 +477,7 @@ export const OrderManager: React.FC = () => {
                           <TableRow key={index}>
                             <TableCell>{item.name || 'N/A'}</TableCell>
                             <TableCell>{item.quantity}</TableCell>
+                            <TableCell>₹{item.originalPrice.toFixed(2)}</TableCell>
                             <TableCell>₹{item.price.toFixed(2)}</TableCell>
                             <TableCell>₹{(item.taxAmount || 0).toFixed(2)}</TableCell>
                             <TableCell className="text-right">
@@ -480,24 +486,57 @@ export const OrderManager: React.FC = () => {
                           </TableRow>
                         ))}
                         <TableRow>
-                          <TableCell colSpan={3} className="font-medium">Subtotal</TableCell>
+                          <TableCell colSpan={4} className="font-medium">Subtotal (without discount)</TableCell>
                           <TableCell className="font-medium">
-                            ₹{(selectedOrder.items.reduce((sum, item) => sum + (item.taxAmount || 0), 0)).toFixed(2)}
+                            ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            ₹{(selectedOrder.items.reduce((sum, item) => sum + item.quantity * item.price, 0)).toFixed(2)}
+                            ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={4} className="font-medium">Subtotal (with discount)</TableCell>
+                          <TableCell className="font-medium">
+                            ₹{(selectedOrder.priceWithDiscount).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            ₹{(selectedOrder.priceWithDiscount).toFixed(2)}
                           </TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell colSpan={4} className="font-medium">Total Tax</TableCell>
+                          <TableCell className="font-medium">
+                            ₹{(selectedOrder.totalTax || 0).toFixed(2)}
+                          </TableCell>
                           <TableCell className="text-right font-medium">
                             ₹{(selectedOrder.totalTax || 0).toFixed(2)}
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell colSpan={4} className="font-medium">Total</TableCell>
+                          <TableCell colSpan={4} className="font-medium">Shipping</TableCell>
+                          <TableCell className="font-medium">
+                            ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}
+                          </TableCell>
                           <TableCell className="text-right font-medium">
-                            ₹{selectedOrder.totalAmount.toFixed(2)}
+                            ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={4} className="font-medium">Subtotal (with discount, tax, shipping)</TableCell>
+                          <TableCell className="font-medium">
+                            ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={4} className="font-medium">Total</TableCell>
+                          <TableCell className="font-medium">
+                            ₹{(selectedOrder.totalAmount).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            ₹{(selectedOrder.totalAmount).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -505,7 +544,6 @@ export const OrderManager: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                {/* Order Status */}
                 <div className="flex justify-between items-center">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">

@@ -12,6 +12,7 @@ interface FirestoreOrderItem {
   quantity?: number;
   priceAtPurchase?: number;
   taxAmount?: number;
+  originalPrice?: number;
 }
 
 export const useFirebaseAdminOrders = () => {
@@ -21,7 +22,6 @@ export const useFirebaseAdminOrders = () => {
   const companyId = 'shopping_cart';
   const paths = useFirestorePaths(companyId);
 
-  // Fetch all orders for the company
   useEffect(() => {
     const ordersPath = paths.getOrdersPath();
     if (!ordersPath) {
@@ -53,9 +53,14 @@ export const useFirebaseAdminOrders = () => {
               quantity: item.quantity || 0,
               priceAtPurchase: item.priceAtPurchase || item.price || 0,
               taxAmount: item.taxAmount || 0,
+              originalPrice: item.originalPrice || item.price || 0,
             }) as OrderItem),
             totalAmount: data.totalAmount || 0,
             totalTax: data.totalTax || 0,
+            shippingCharge: data.shippingCharge || 0,
+            priceWithoutDiscount: data.priceWithoutDiscount || 0,
+            priceWithDiscount: data.priceWithDiscount || 0,
+            priceWithDiscountTaxShipping: data.priceWithDiscountTaxShipping || 0,
             status: data.status || 'pending',
             paymentStatus: data.paymentStatus || 'pending',
             shippingAddress: {
@@ -85,7 +90,6 @@ export const useFirebaseAdminOrders = () => {
     return () => unsubscribe();
   }, [paths]);
 
-  // Update order status
   const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
     try {
       const orderPath = paths.getSingleOrderPath(orderId);

@@ -5,14 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCartStore } from '@/hooks/store/cartStore';
 import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
+import { useFirebaseSettings } from '@/hooks/useFirebaseSettings';
 import { Minus, Plus, Trash2, ShoppingCart, Loader2 } from 'lucide-react';
 import { Header } from '@/components/shopping/Header';
+import { Footer } from '@/components/shopping/Footer'; // Added Footer import
 import { useAuth } from '@/contexts/AuthContext';
 import { Product } from '@/types/product';
 
 export const CartPage: React.FC = () => {
   const { items, updateQuantity, removeItem, getTotalPrice, getTotalTax } = useCartStore();
   const { products, loading: productsLoading } = useFirebaseProducts();
+  const { settings, loading: settingsLoading } = useFirebaseSettings();
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -36,33 +39,34 @@ export const CartPage: React.FC = () => {
     navigate('/orders');
   };
 
-  if (productsLoading) {
+  if (productsLoading || settingsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
         <Header
           onLogin={handleLogin}
           onLogout={logout}
           onAdminClick={() => navigate('/admin')}
           onOrdersClick={handleOrdersClick}
         />
-        <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+        <div className="max-w-2xl mx-auto px-4 py-8 text-center flex-grow">
           <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading products...</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
+        <Footer />
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
         <Header
           onLogin={handleLogin}
           onLogout={logout}
           onAdminClick={() => navigate('/admin')}
           onOrdersClick={handleOrdersClick}
         />
-        <div className="max-w-2xl mx-auto px-4 py-8 text-center">
+        <div className="max-w-2xl mx-auto px-4 py-8 text-center flex-grow">
           <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium text-muted-foreground mb-2">Your cart is empty</h3>
           <p className="text-sm text-muted-foreground">Add some products to get started!</p>
@@ -74,29 +78,31 @@ export const CartPage: React.FC = () => {
             Back to Store
           </Button>
         </div>
+        <Footer />
       </div>
     );
   }
 
-  const subtotalWithoutTax = getTotalPrice(products);
+  const shipping = settings?.shippingCharge || 0;
+  const priceWithDiscount = getTotalPrice(products);
   const totalTax = getTotalTax(products);
-  const shipping = 5;
-  const finalTotal = subtotalWithoutTax + totalTax + shipping;
-  const subtotalWithoutDiscount = items.reduce((total, item) => {
+  const priceWithoutDiscount = items.reduce((total, item) => {
     const product = products.find((p) => p.productId === item.productId);
     const price = Number(product?.price || item.price) || 0;
     return total + price * item.quantity;
   }, 0);
+  const priceWithDiscountTaxShipping = priceWithDiscount + totalTax + shipping;
+  const finalTotal = priceWithDiscountTaxShipping;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
       <Header
         onLogin={handleLogin}
         onLogout={logout}
         onAdminClick={() => navigate('/admin')}
         onOrdersClick={handleOrdersClick}
       />
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto px-4 py-8 flex-grow">
         <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
           <ShoppingCart className="h-6 w-6" />
           Shopping Cart
@@ -106,6 +112,7 @@ export const CartPage: React.FC = () => {
             {items.map((item) => {
               const product = products.find((p) => p.productId === item.productId);
               const price = Number(product?.discountedPrice || product?.price || item.price) || 0;
+              const originalPrice = Number(product?.price || item.price) || 0;
               const taxRate = product?.taxRate || 0;
               const taxAmount = price * item.quantity * (taxRate / 100);
               const itemTotal = price * item.quantity;
@@ -120,7 +127,8 @@ export const CartPage: React.FC = () => {
                     />
                     <div className="flex-1">
                       <h3 className="font-medium">{item.name}</h3>
-                      <p className="text-sm text-muted-foreground">₹{Number(price).toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">Original: ₹{Number(originalPrice).toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">Price: ₹{Number(price).toFixed(2)}</p>
                       {taxRate > 0 && (
                         <p className="text-sm text-muted-foreground">Tax: {taxRate}% (₹{Number(taxAmount).toFixed(2)})</p>
                       )}
@@ -166,11 +174,11 @@ export const CartPage: React.FC = () => {
           <div className="border-t pt-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal (without discount):</span>
-              <span>₹{Number(subtotalWithoutDiscount).toFixed(2)}</span>
+              <span>₹{Number(priceWithoutDiscount).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Subtotal (with discount):</span>
-              <span>₹{Number(subtotalWithoutTax).toFixed(2)}</span>
+              <span>₹{Number(priceWithDiscount).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Total Tax:</span>
@@ -179,6 +187,10 @@ export const CartPage: React.FC = () => {
             <div className="flex justify-between text-sm">
               <span>Shipping:</span>
               <span>₹{Number(shipping).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>Subtotal (with discount, tax, shipping):</span>
+              <span>₹{Number(priceWithDiscountTaxShipping).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg pt-2 border-t">
               <span>Final Total:</span>
@@ -203,6 +215,7 @@ export const CartPage: React.FC = () => {
           </Button>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
