@@ -1,21 +1,34 @@
 import React from 'react';
-import { Product } from '@/types/product';
 import { ProductCard } from './ProductCard';
 import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
 
 interface ProductGridProps {
   searchTerm: string;
-  selectedCategory: string;
+  selectedCategories: string[];
+  selectedSubcategories: string[];
 }
 
-export const ProductGrid: React.FC<ProductGridProps> = ({ searchTerm, selectedCategory }) => {
+export const ProductGrid: React.FC<ProductGridProps> = ({
+  searchTerm,
+  selectedCategories,
+  selectedSubcategories,
+}) => {
   const { products, loading } = useFirebaseProducts();
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
-    return matchesSearch && matchesCategory;
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory =
+      selectedCategories.includes('all') ||
+      selectedCategories.includes(product.categoryId);
+    
+    const matchesSubcategory =
+      selectedSubcategories.length === 0 ||
+      selectedSubcategories.includes(product.subcategoryId || '');
+    
+    return matchesSearch && matchesCategory && matchesSubcategory;
   });
 
   if (loading) {

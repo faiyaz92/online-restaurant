@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 export interface Product {
   productId: string;
   name: string;
@@ -88,6 +90,16 @@ export interface ShippingAddress {
   zipCode: string;
   country: string;
   phoneNumber: string;
+}
+
+export interface Address extends ShippingAddress {
+  email: ReactNode;
+  addressId: string;
+  userId: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+  companyId: string;
 }
 
 export interface Wishlist {

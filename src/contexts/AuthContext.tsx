@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const paths = useFirestorePaths('abc_pvt_ltd');
+  const paths = useFirestorePaths('shopping_cart');
 
   const login = async (email: string, password: string): Promise<void> => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);

@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { StorePage } from "./pages/StorePage";
 import { AdminPage } from "./pages/AdminPage";
+import { OrderConfirmationPage } from "./pages/OrderConfirmationPage";
+import { OrderListPage } from "./pages/UserOrderList";
+import { OrderDetailsPage } from "./pages/UserOrderDetailsPage";
 import { AuthProvider } from "./contexts/AuthContext";
 import LoginForm from "./components/auth/LoginForm";
 import NotFound from "./pages/NotFound";
@@ -22,6 +25,9 @@ const App = () => (
             <Route path="/" element={<StorePage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/admin/*" element={<AdminPage onBackToStore={() => window.location.href = '/'} onLogout={() => {}} />} />
+            <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
+            <Route path="/orders" element={<OrderListPage />} />
+            <Route path="/orders/:orderId" element={<OrderDetailsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

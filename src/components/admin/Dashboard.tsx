@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { NavLink } from 'react-router-dom';
 import { 
   BarChart3, 
   DollarSign, 
@@ -11,12 +12,23 @@ import {
   TrendingUp,
   Eye
 } from 'lucide-react';
+import { useFirebaseAdminOrders } from '@/hooks/useAdminOrders';
+import { useFirebaseProducts } from '@/hooks/useFirebaseProducts';
 
 export const Dashboard: React.FC = () => {
+  const { orders, loading: ordersLoading } = useFirebaseAdminOrders();
+  const { products, loading: productsLoading } = useFirebaseProducts();
+
+  // Calculate stats
+  const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const totalOrders = orders.length;
+  const activeProducts = products.length;
+  const totalCustomers = 1420; // Static data as per requirement
+
   const stats = [
     {
       title: 'Total Revenue',
-      value: '$45,231.89',
+      value: `$${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       change: '+20.1%',
       changeType: 'positive' as const,
       icon: DollarSign,
@@ -24,7 +36,7 @@ export const Dashboard: React.FC = () => {
     },
     {
       title: 'Total Orders',
-      value: '2,350',
+      value: totalOrders.toLocaleString(),
       change: '+15.2%',
       changeType: 'positive' as const,
       icon: ShoppingCart,
@@ -32,7 +44,7 @@ export const Dashboard: React.FC = () => {
     },
     {
       title: 'Active Products',
-      value: '567',
+      value: activeProducts.toLocaleString(),
       change: '+5.4%',
       changeType: 'positive' as const,
       icon: Package,
@@ -40,7 +52,7 @@ export const Dashboard: React.FC = () => {
     },
     {
       title: 'Total Customers',
-      value: '1,420',
+      value: totalCustomers.toLocaleString(),
       change: '+12.5%',
       changeType: 'positive' as const,
       icon: Users,
@@ -48,21 +60,38 @@ export const Dashboard: React.FC = () => {
     }
   ];
 
-  const recentOrders = [
-    { id: '#12534', customer: 'John Doe', amount: '$89.90', status: 'Delivered', time: '2 hours ago' },
-    { id: '#12535', customer: 'Jane Smith', amount: '$156.50', status: 'Processing', time: '4 hours ago' },
-    { id: '#12536', customer: 'Bob Johnson', amount: '$67.30', status: 'Shipped', time: '6 hours ago' },
-    { id: '#12537', customer: 'Alice Brown', amount: '$234.80', status: 'Confirmed', time: '8 hours ago' },
-    { id: '#12538', customer: 'Charlie Wilson', amount: '$45.20', status: 'Pending', time: '10 hours ago' },
-  ];
+  // Get recent orders (last 5)
+  const recentOrders = orders
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5)
+    .map(order => ({
+      id: order.orderNumber,
+      customer: order.customer.name,
+      amount: `$${order.totalAmount.toFixed(2)}`,
+      status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+      time: new Date(order.createdAt).toLocaleString()
+    }));
 
-  const topProducts = [
-    { name: 'Wireless Headphones', sales: 234, revenue: '$23,400', image: '/placeholder.svg' },
-    { name: 'Smart Watch', sales: 189, revenue: '$18,900', image: '/placeholder.svg' },
-    { name: 'Laptop Stand', sales: 156, revenue: '$7,800', image: '/placeholder.svg' },
-    { name: 'Phone Case', sales: 145, revenue: '$2,900', image: '/placeholder.svg' },
-    { name: 'Bluetooth Speaker', sales: 123, revenue: '$12,300', image: '/placeholder.svg' },
-  ];
+  // Calculate top products
+  const topProducts = products
+    .map(product => ({
+      name: product.name,
+      sales: orders.reduce((sum, order) => 
+        sum + order.items.reduce((itemSum, item) => 
+          item.productId === product.productId ? itemSum + item.quantity : itemSum, 0
+        ), 0),
+      revenue: orders.reduce((sum, order) => 
+        sum + order.items.reduce((itemSum, item) => 
+          item.productId === product.productId ? itemSum + (item.quantity * item.priceAtPurchase) : itemSum, 0
+        ), 0),
+      image: product.images[0] || '/placeholder.svg'
+    }))
+    .sort((a, b) => b.sales - a.sales)
+    .slice(0, 5)
+    .map(product => ({
+      ...product,
+      revenue: `$${product.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }));
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -74,6 +103,10 @@ export const Dashboard: React.FC = () => {
     };
     return variants[status as keyof typeof variants] || 'secondary';
   };
+
+  if (ordersLoading || productsLoading) {
+    return <div>Loading dashboard...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -139,9 +172,11 @@ export const Dashboard: React.FC = () => {
               ))}
             </div>
             <div className="mt-4">
-              <Button variant="outline" className="w-full">
-                <Eye className="h-4 w-4 mr-2" />
-                View all orders
+              <Button asChild variant="outline" className="w-full">
+                <NavLink to="/admin/orders">
+                  <Eye className="h-4 w-4 mr-2" />
+                  View all orders
+                </NavLink>
               </Button>
             </div>
           </CardContent>
@@ -192,21 +227,29 @@ export const Dashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
-            <Button className="h-20 flex-col gap-2">
-              <Package className="h-6 w-6" />
-              Add Product
+            <Button asChild className="h-20 flex-col gap-2">
+              <NavLink to="/admin/products">
+                <Package className="h-6 w-6" />
+                Add Product
+              </NavLink>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <ShoppingCart className="h-6 w-6" />
-              View Orders
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <NavLink to="/admin/orders">
+                <ShoppingCart className="h-6 w-6" />
+                View Orders
+              </NavLink>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Users className="h-6 w-6" />
-              Manage Customers
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <NavLink to="/admin/customers">
+                <Users className="h-6 w-6" />
+                Manage Customers
+              </NavLink>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <BarChart3 className="h-6 w-6" />
-              View Analytics
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <NavLink to="/admin/analytics">
+                <BarChart3 className="h-6 w-6" />
+                View Analytics
+              </NavLink>
             </Button>
           </div>
         </CardContent>

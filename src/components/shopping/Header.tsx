@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { ShoppingCart, Heart, User, LogOut, Settings, Package } from 'lucide-react';
-import { useCartStore } from '@/store/cartStore';
+import { useCartStore } from '@/hooks/store/cartStore';
 import { useUserInfo } from '@/hooks/useUserInfo';
 import { Role } from '@/types/auth';
 
@@ -20,13 +20,15 @@ interface HeaderProps {
   onLogin: () => void;
   onLogout: () => void;
   onAdminClick?: () => void;
+  onOrdersClick: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   onCartClick, 
   onLogin, 
   onLogout,
-  onAdminClick 
+  onAdminClick,
+  onOrdersClick,
 }) => {
   const { getTotalItems } = useCartStore();
   const userInfo = useUserInfo();
@@ -94,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
                   Profile
                 </DropdownMenuItem>
                 
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={onOrdersClick}>
                   <Package className="mr-2 h-4 w-4" />
                   Orders
                 </DropdownMenuItem>

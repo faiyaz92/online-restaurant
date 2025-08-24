@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, ShoppingCart, Star } from 'lucide-react';
 import { Product } from '@/types/product';
-import { useCartStore } from '@/store/cartStore';
+import { useCartStore } from '@/hooks/store/cartStore';
 import { toast } from 'sonner';
 
 interface ProductCardProps {
