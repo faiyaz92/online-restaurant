@@ -42,6 +42,7 @@ export const useFirestorePaths = (companyId?: string) => {
         getTaxiBookingSettingsPath: () => '',
         getVisitorCountersPath: () => '',
         getUserAddressesPath: (_userId: string) => '',
+        getSettingsPath: () => '',
       };
     }
 
@@ -85,6 +86,7 @@ export const useFirestorePaths = (companyId?: string) => {
       getTaxiBookingSettingsPath: () => `${tenantCompaniesPath}/${companyId}/settings/taxiBookingSettings`,
       getVisitorCountersPath: () => `${tenantCompaniesPath}/${companyId}/analytics/visitorCounters/daily`,
       getUserAddressesPath: (userId: string) => `${tenantCompaniesPath}/${companyId}/users/${userId}/addresses`,
+      getSettingsPath: () => `${tenantCompaniesPath}/${companyId}/settings/general`,
     };
   }, [companyId]);
 };

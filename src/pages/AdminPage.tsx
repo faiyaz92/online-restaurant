@@ -5,6 +5,7 @@ import { Dashboard } from '@/components/admin/Dashboard';
 import { ProductManager } from '@/components/admin/ProductManager';
 import { CategoryManager } from '@/components/admin/CategoryManager';
 import { OrderManager } from '@/components/admin/OrderManager';
+import { SettingsPage } from '@/components/admin/SettingsManager';
 
 interface AdminPageProps {
   onBackToStore: () => void;
@@ -22,7 +23,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onLogout })
         <Route path="/customers" element={<div>Customers Management</div>} />
         <Route path="/analytics" element={<div>Analytics</div>} />
         <Route path="/promotions" element={<div>Promotions Management</div>} />
-        <Route path="/settings" element={<div>Settings</div>} />
+        <Route path="/settings" element={< SettingsPage/>} />
       </Routes>
     </AdminLayout>
   );

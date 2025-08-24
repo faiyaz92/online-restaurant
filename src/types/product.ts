@@ -106,6 +106,15 @@ export interface OrderData {
   updatedAt: string;
 }
 
+export interface Settings {
+  shippingCharge: number;
+  termsAndConditions: string;
+  storeStatus: 'active' | 'inactive';
+  taxRate: number;
+  updatedAt: string;
+  companyId: string;
+}
+
 export interface ShippingAddress {
   fullName: string;
   address: string;

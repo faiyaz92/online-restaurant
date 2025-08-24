@@ -18,10 +18,10 @@ import {
   ShoppingCart, 
   Users, 
   FolderOpen,
-  Settings,
   BarChart3,
-  Tag
+  Tag,
 } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 const menuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
@@ -53,7 +53,6 @@ export function AdminSidebar() {
   return (
     <Sidebar className={collapsed ? 'w-14' : 'w-60'} collapsible="icon">
       <SidebarTrigger className="m-2 self-end" />
-
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Admin Panel</SidebarGroupLabel>
