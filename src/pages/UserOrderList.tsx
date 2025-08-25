@@ -73,8 +73,8 @@ export const OrderListPage: React.FC = () => {
     const config = variants[status];
     const Icon = config.icon;
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1 text-xs sm:text-sm">
-        <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+      <Badge variant={config.variant} className="flex items-center gap-1 text-xs">
+        <Icon className="h-3 w-3" />
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
@@ -93,10 +93,10 @@ export const OrderListPage: React.FC = () => {
           onAdminClick={handleAdminClick}
           onOrdersClick={handleOrdersClick}
         />
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-center flex-grow">
-          <h2 className="text-xl sm:text-2xl font-semibold text-red-600">Please Log In</h2>
-          <p className="mt-2 text-xs sm:text-sm text-muted-foreground">You need to be logged in to view your orders.</p>
-          <Button className="mt-4 text-sm sm:text-base px-4 sm:px-6 py-2" onClick={() => navigate('/login')}>
+        <div className="max-w-3xl mx-auto px-4 py-6 text-center flex-grow">
+          <h2 className="text-xl font-semibold text-red-600">Please Log In</h2>
+          <p className="mt-2 text-xs text-muted-foreground">You need to be logged in to view your orders.</p>
+          <Button className="mt-4 text-xs px-4 py-2" onClick={() => navigate('/login')}>
             Go to Login
           </Button>
         </div>
@@ -114,9 +114,9 @@ export const OrderListPage: React.FC = () => {
           onAdminClick={handleAdminClick}
           onOrdersClick={handleOrdersClick}
         />
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-center flex-grow">
-          <Loader2 className="mx-auto h-6 w-6 sm:h-8 sm:w-8 animate-spin" />
-          <p className="mt-2 text-xs sm:text-sm text-muted-foreground">Loading orders...</p>
+        <div className="max-w-3xl mx-auto px-4 py-6 text-center flex-grow">
+          <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+          <p className="mt-2 text-xs text-muted-foreground">Loading orders...</p>
         </div>
         <Footer />
       </div>
@@ -132,10 +132,10 @@ export const OrderListPage: React.FC = () => {
           onAdminClick={handleAdminClick}
           onOrdersClick={handleOrdersClick}
         />
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-center flex-grow">
-          <h2 className="text-xl sm:text-2xl font-semibold text-red-600">Error</h2>
-          <p className="mt-2 text-xs sm:text-sm text-muted-foreground">{error}</p>
-          <Button className="mt-4 text-sm sm:text-base px-4 sm:px-6 py-2" onClick={() => navigate('/')}>
+        <div className="max-w-3xl mx-auto px-4 py-6 text-center flex-grow">
+          <h2 className="text-xl font-semibold text-red-600">Error</h2>
+          <p className="mt-2 text-xs text-muted-foreground">{error}</p>
+          <Button className="mt-4 text-xs px-4 py-2" onClick={() => navigate('/')}>
             Return to Store
           </Button>
         </div>
@@ -153,11 +153,11 @@ export const OrderListPage: React.FC = () => {
           onAdminClick={handleAdminClick}
           onOrdersClick={handleOrdersClick}
         />
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-center flex-grow">
-          <Package className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-4" />
-          <h2 className="text-xl sm:text-2xl font-semibold">No Orders Found</h2>
-          <p className="mt-2 text-xs sm:text-sm text-muted-foreground">You haven't placed any orders yet.</p>
-          <Button className="mt-4 text-sm sm:text-base px-4 sm:px-6 py-2" onClick={() => navigate('/')}>
+        <div className="max-w-3xl mx-auto px-4 py-6 text-center flex-grow">
+          <Package className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
+          <h2 className="text-xl font-semibold">No Orders Found</h2>
+          <p className="mt-2 text-xs text-muted-foreground">You haven't placed any orders yet.</p>
+          <Button className="mt-4 text-xs px-4 py-2" onClick={() => navigate('/')}>
             Shop Now
           </Button>
         </div>
@@ -174,17 +174,17 @@ export const OrderListPage: React.FC = () => {
         onAdminClick={handleAdminClick}
         onOrdersClick={handleOrdersClick}
       />
-      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-grow">
-        <h2 className="text-xl sm:text-3xl font-bold tracking-tight mb-4 sm:mb-6">Your Orders</h2>
-        <div className="space-y-4 sm:space-y-6">
+      <div className="w-full max-w-4xl mx-auto px-4 py-6 flex-grow">
+        <h2 className="text-xl font-bold tracking-tight mb-4">Your Orders</h2>
+        <div className="space-y-4">
           {sortedOrders.map((order) => (
             <Card key={order.id}>
-              <CardHeader className="p-4 sm:p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-                  <CardTitle className="text-base sm:text-lg font-semibold">
+              <CardHeader className="p-3">
+                <div className="flex flex-row justify-between items-center flex-nowrap gap-2">
+                  <CardTitle className="text-base font-semibold truncate">
                     Order #{order.orderNumber || 'N/A'}
                   </CardTitle>
-                  <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2 shrink-0">
                     {getStatusBadge(order.status)}
                     <Button
                       variant="ghost"
@@ -192,105 +192,107 @@ export const OrderListPage: React.FC = () => {
                       onClick={() => toggleOrderExpansion(order.id)}
                       aria-expanded={expandedOrders[order.id] || false}
                       aria-label={expandedOrders[order.id] ? `Collapse order ${order.orderNumber} details` : `Expand order ${order.orderNumber} details`}
-                      className="p-2"
+                      className="p-1.5"
                     >
                       {expandedOrders[order.id] ? (
-                        <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <ChevronUp className="h-4 w-4" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <ChevronDown className="h-4 w-4" />
                       )}
                     </Button>
                   </div>
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-2">
+                <div className="text-xs text-muted-foreground mt-1">
                   <p>Placed on: {formatDate(order.createdAt)}</p>
                   <p>Total: ₹{Number(order.totalAmount).toFixed(2)}</p>
                 </div>
               </CardHeader>
               {expandedOrders[order.id] && (
-                <CardContent className="p-4 sm:p-6">
+                <CardContent className="p-3">
                   <div className="space-y-4">
                     <div>
                       {order.deliveryDate && (
-                        <p className="text-xs sm:text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Delivered: {formatDate(order.deliveryDate)}
                         </p>
                       )}
                     </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs sm:text-sm">Product</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Quantity</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Original Price</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Price</TableHead>
-                          <TableHead className="text-xs sm:text-sm">Tax</TableHead>
-                          <TableHead className="text-xs sm:text-sm text-right">Total</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {order.items.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="text-xs sm:text-sm">{item.name}</TableCell>
-                            <TableCell className="text-xs sm:text-sm">{item.quantity}</TableCell>
-                            <TableCell className="text-xs sm:text-sm">₹{Number(item.originalPrice).toFixed(2)}</TableCell>
-                            <TableCell className="text-xs sm:text-sm">₹{Number(item.priceAtPurchase).toFixed(2)}</TableCell>
-                            <TableCell className="text-xs sm:text-sm">₹{Number(item.taxAmount).toFixed(2)}</TableCell>
-                            <TableCell className="text-xs sm:text-sm text-right">
-                              ₹{Number(item.priceAtPurchase * item.quantity).toFixed(2)}
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">Product</TableHead>
+                            <TableHead className="text-xs">Quantity</TableHead>
+                            <TableHead className="text-xs">Original Price</TableHead>
+                            <TableHead className="text-xs">Price</TableHead>
+                            <TableHead className="text-xs">Tax</TableHead>
+                            <TableHead className="text-xs text-right">Total</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {order.items.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="text-xs">{item.name}</TableCell>
+                              <TableCell className="text-xs">{item.quantity}</TableCell>
+                              <TableCell className="text-xs">₹{Number(item.originalPrice).toFixed(2)}</TableCell>
+                              <TableCell className="text-xs">₹{Number(item.priceAtPurchase).toFixed(2)}</TableCell>
+                              <TableCell className="text-xs">₹{Number(item.taxAmount).toFixed(2)}</TableCell>
+                              <TableCell className="text-xs text-right">
+                                ₹{Number(item.priceAtPurchase * item.quantity).toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs">Subtotal (without discount)</TableCell>
+                            <TableCell />
+                            <TableCell className="text-right font-medium text-xs">
+                              ₹{Number(order.priceWithoutDiscount).toFixed(2)}
                             </TableCell>
                           </TableRow>
-                        ))}
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (without discount)</TableCell>
-                          <TableCell />
-                          <TableCell className="text-right font-medium text-xs sm:text-sm">
-                            ₹{Number(order.priceWithoutDiscount).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (with discount)</TableCell>
-                          <TableCell />
-                          <TableCell className="text-right font-medium text-xs sm:text-sm">
-                            ₹{Number(order.priceWithDiscount).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Total Tax</TableCell>
-                          <TableCell />
-                          <TableCell className="text-right font-medium text-xs sm:text-sm">
-                            ₹{Number(order.totalTax).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Shipping</TableCell>
-                          <TableCell />
-                          <TableCell className="text-right font-medium text-xs sm:text-sm">
-                            ₹{Number(order.shippingCharge).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (with discount, tax, shipping)</TableCell>
-                          <TableCell />
-                          <TableCell className="text-right font-medium text-xs sm:text-sm">
-                            ₹{Number(order.priceWithDiscountTaxShipping).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Final Total</TableCell>
-                          <TableCell />
-                          <TableCell className="text-right font-medium text-xs sm:text-sm">
-                            ₹{Number(order.totalAmount).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs">Subtotal (with discount)</TableCell>
+                            <TableCell />
+                            <TableCell className="text-right font-medium text-xs">
+                              ₹{Number(order.priceWithDiscount).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs">Total Tax</TableCell>
+                            <TableCell />
+                            <TableCell className="text-right font-medium text-xs">
+                              ₹{Number(order.totalTax).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs">Shipping</TableCell>
+                            <TableCell />
+                            <TableCell className="text-right font-medium text-xs">
+                              ₹{Number(order.shippingCharge).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs">Subtotal (with discount, tax, shipping)</TableCell>
+                            <TableCell />
+                            <TableCell className="text-right font-medium text-xs">
+                              ₹{Number(order.priceWithDiscountTaxShipping).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs">Final Total</TableCell>
+                            <TableCell />
+                            <TableCell className="text-right font-medium text-xs">
+                              ₹{Number(order.totalAmount).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
                     <div>
-                      <p className="font-medium text-xs sm:text-sm">Shipping Address:</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                      <p className="font-medium text-xs">Shipping Address:</p>
+                      <p className="text-xs text-muted-foreground">
                         {order.shippingAddress.street}, {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}
                       </p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">{order.customer.phone}</p>
+                      <p className="text-xs text-muted-foreground">{order.customer.phone}</p>
                     </div>
                   </div>
                 </CardContent>
