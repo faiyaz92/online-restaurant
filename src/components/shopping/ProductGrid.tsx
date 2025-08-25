@@ -10,6 +10,7 @@ interface ProductGridProps {
   categories: Category[];
 }
 
+// ProductGrid.tsx
 export const ProductGrid: React.FC<ProductGridProps> = ({
   searchTerm,
   selectedCategories,
@@ -74,7 +75,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
         return (
           <div key={categoryId} className="space-y-3">
             <h2 className="text-lg font-semibold text-foreground">{category?.name || 'Uncategorized'}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
               {productsByCategory[categoryId].map((product) => (
                 <ProductCard
                   key={product.productId}

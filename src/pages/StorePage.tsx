@@ -94,9 +94,7 @@ export const StorePage = () => {
           onAdminClick={() => navigate('/admin')}
           onOrdersClick={handleViewOrders}
         />
-        <CheckoutForm onOrderComplete={handleOrderComplete}
-
-/>
+        <CheckoutForm onOrderComplete={handleOrderComplete} />
         <Footer />
       </div>
     );
@@ -130,7 +128,7 @@ export const StorePage = () => {
             <aside
               className={`fixed inset-y-0 left-0 z-40 w-64 bg-background transform ${
                 showMobileSidebar ? 'translate-x-0' : '-translate-x-full'
-              } lg:transform-none lg:static lg:w-64 transition-transform duration-300 ease-in-out max-h-[calc(100vh-8rem)]`}
+              } lg:transform-none lg:static lg:w-64 transition-transform duration-300 ease-in-out h-full lg:max-h-[calc(100vh-8rem)]`}
             >
               <div className="h-full bg-background rounded-md shadow-sm p-3">
                 <CategoryFilter
