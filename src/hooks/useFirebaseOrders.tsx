@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/config/firebase';
 import { useFirestorePaths } from './useFirestorePaths';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Address, Order, OrderItem } from '@/types/product';
+import { Order, OrderItem } from '@/types/product';
 
 interface FirestoreOrderItem {
   productId?: string;
@@ -32,6 +31,7 @@ export const useFirebaseOrders = (userId: string | undefined) => {
 
     console.log('Fetching orders for userId:', userId);
     const ordersPath = paths.getOrdersPath();
+    console.log('Orders path:', ordersPath);
     const q = query(
       collection(firestore, ordersPath),
       where('userId', '==', userId)
@@ -78,6 +78,10 @@ export const useFirebaseOrders = (userId: string | undefined) => {
             updatedAt: data.updatedAt || new Date().toISOString(),
             companyId: data.companyId || 'shopping_cart',
             deliveryDate: data.status === 'delivered' ? data.updatedAt || undefined : undefined,
+            cancellationReason: data.cancellationReason || undefined,
+            cancellationMessage: data.cancellationMessage || undefined,
+            returnReason: data.returnReason || undefined,
+            returnMessage: data.returnMessage || undefined,
           } as Order;
         });
         console.log('Fetched orders:', ordersData);
@@ -85,7 +89,7 @@ export const useFirebaseOrders = (userId: string | undefined) => {
         setLoading(false);
       },
       (err) => {
-        console.error('Error fetching orders:', err.message, err.code);
+        console.error('Error fetching orders:', err.message, err.code, err.stack);
         setError(err.message);
         toast.error(`Failed to fetch orders: ${err.message}`);
         setLoading(false);
@@ -105,6 +109,7 @@ export const useFirebaseOrders = (userId: string | undefined) => {
     try {
       console.log('Fetching order:', orderId);
       const orderPath = paths.getSingleOrderPath(orderId);
+      console.log('Order path:', orderPath);
       const docRef = doc(firestore, orderPath);
       const docSnap = await getDoc(docRef);
 
@@ -151,13 +156,70 @@ export const useFirebaseOrders = (userId: string | undefined) => {
         updatedAt: data.updatedAt || new Date().toISOString(),
         companyId: data.companyId || 'shopping_cart',
         deliveryDate: data.status === 'delivered' ? data.updatedAt || undefined : undefined,
+        cancellationReason: data.cancellationReason || undefined,
+        cancellationMessage: data.cancellationMessage || undefined,
+        returnReason: data.returnReason || undefined,
+        returnMessage: data.returnMessage || undefined,
       } as Order;
       console.log('Fetched order:', orderData);
       return orderData;
     } catch (err: any) {
-      console.error('Error fetching order:', err.message, err.code);
+      console.error('Error fetching order:', err.message, err.code, err.stack);
       toast.error(`Failed to fetch order: ${err.message}`);
       return null;
+    }
+  };
+
+  const updateOrderStatus = async (
+    orderId: string,
+    newStatus: Order['status'],
+    additionalData: Partial<Pick<Order, 'cancellationReason' | 'cancellationMessage' | 'returnReason' | 'returnMessage'>> = {}
+  ) => {
+    if (!orderId) {
+      console.error('Invalid orderId provided for update:', orderId);
+      toast.error('Invalid order ID');
+      throw new Error('Invalid order ID');
+    }
+
+    try {
+      const orderPath = paths.getSingleOrderPath(orderId);
+      if (!orderPath) {
+        console.error('Invalid Firestore path for order:', orderId);
+        throw new Error('Invalid Firestore path for order');
+      }
+      console.log('Updating order:', orderId, 'to status:', newStatus, 'with data:', additionalData);
+      const orderRef = doc(firestore, orderPath);
+
+      // Validate returnReason if provided
+      if (additionalData.returnReason) {
+        const validReturnReasons = ['defective_product', 'wrong_item', 'not_as_described', 'changed_mind', 'other'];
+        if (!validReturnReasons.includes(additionalData.returnReason)) {
+          console.error('Invalid return reason:', additionalData.returnReason);
+          throw new Error(`Invalid return reason: ${additionalData.returnReason}`);
+        }
+      }
+
+      const updateData: any = {
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (additionalData.cancellationReason) {
+        updateData.cancellationReason = additionalData.cancellationReason;
+        updateData.cancellationMessage = additionalData.cancellationMessage || '';
+      }
+      if (additionalData.returnReason) {
+        updateData.returnReason = additionalData.returnReason;
+        updateData.returnMessage = additionalData.returnMessage || '';
+      }
+
+      await updateDoc(orderRef, updateData);
+      console.log(`Successfully updated order ${orderId} to status: ${newStatus}`);
+      toast.success(`Order ${newStatus === 'cancelled' ? 'cancelled' : newStatus === 'return_initiated' ? 'return initiated' : 'updated'} successfully`);
+    } catch (err: any) {
+      console.error(`Error updating order ${orderId} to status ${newStatus}:`, err.message, err.code, err.stack);
+      toast.error(`Failed to update order: ${err.message}`);
+      throw err;
     }
   };
 
@@ -166,5 +228,6 @@ export const useFirebaseOrders = (userId: string | undefined) => {
     loading,
     error,
     getOrderById,
+    updateOrderStatus,
   };
 };

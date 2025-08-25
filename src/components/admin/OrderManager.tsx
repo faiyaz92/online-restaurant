@@ -17,7 +17,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Table,
@@ -36,6 +35,8 @@ import {
   CheckCircle,
   Package,
   RefreshCw,
+  XCircle,
+  Undo,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -46,77 +47,18 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseAdminOrders } from '@/hooks/useAdminOrders';
-import { Header } from '@/components/shopping/Header';
-import { Role } from '@/types/auth';
-
-interface Order {
-  id: string;
-  orderNumber: string | null;
-  customer: {
-    name: string | null;
-    email: string | null;
-    phone: string | null;
-  };
-  items: {
-    name: string;
-    quantity: number;
-    price: number;
-    taxAmount: number;
-    originalPrice: number;
-  }[];
-  totalAmount: number;
-  totalTax: number;
-  shippingCharge: number;
-  priceWithoutDiscount: number;
-  priceWithDiscount: number;
-  priceWithDiscountTaxShipping: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  shippingAddress: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  createdAt: string;
-  deliveryDate?: string;
-}
+import { Order } from '@/types/product';
 
 export const OrderManager: React.FC = () => {
-  const { currentUser, logout, userInfo } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { orders, loading, error, updateOrderStatus } = useFirebaseAdminOrders();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
 
   const isAdmin = true;
-
-  const handleCartClick = () => {
-    if (!currentUser) {
-      setShowLogin(true);
-      return;
-    }
-    navigate('/cart');
-  };
-
-  const handleLogin = () => {
-    setShowLogin(true);
-  };
-
-  const handleOrdersClick = () => {
-    if (!currentUser) {
-      setShowLogin(true);
-      return;
-    }
-    navigate('/orders');
-  };
-
-  const handleAdminClick = () => {
-    navigate('/admin');
-  };
 
   const statusOptions = [
     { value: 'all', label: 'All Orders' },
@@ -126,7 +68,10 @@ export const OrderManager: React.FC = () => {
     { value: 'packed', label: 'Packed' },
     { value: 'shipped', label: 'Shipped' },
     { value: 'delivered', label: 'Delivered' },
-    { value: 'cancelled', label: 'Cancelled' }
+    { value: 'cancelled', label: 'Cancelled' },
+    { value: 'return_initiated', label: 'Return Initiated' },
+    { value: 'pickup_return', label: 'Pickup Return' },
+    { value: 'returned', label: 'Returned' },
   ];
 
   const filteredOrders = orders
@@ -150,16 +95,19 @@ export const OrderManager: React.FC = () => {
       packed: { variant: 'default' as const, icon: Package },
       shipped: { variant: 'default' as const, icon: Truck },
       delivered: { variant: 'default' as const, icon: CheckCircle },
-      cancelled: { variant: 'destructive' as const, icon: Clock }
+      cancelled: { variant: 'destructive' as const, icon: XCircle },
+      return_initiated: { variant: 'secondary' as const, icon: Undo },
+      pickup_return: { variant: 'secondary' as const, icon: Truck },
+      returned: { variant: 'default' as const, icon: CheckCircle },
     };
     
     const config = variants[status];
     const Icon = config.icon;
     
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
+      <Badge variant={config.variant} className="flex items-center gap-1 text-xs">
         <Icon className="h-3 w-3" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
       </Badge>
     );
   };
@@ -169,11 +117,11 @@ export const OrderManager: React.FC = () => {
       pending: 'destructive' as const,
       paid: 'default' as const,
       failed: 'destructive' as const,
-      refunded: 'secondary' as const
+      refunded: 'secondary' as const,
     };
     
     return (
-      <Badge variant={variants[status]}>
+      <Badge variant={variants[status]} className="text-xs">
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
@@ -199,23 +147,17 @@ export const OrderManager: React.FC = () => {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
   if (!currentUser || !isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-        <Header
-          onLogin={handleLogin}
-          onLogout={logout}
-          onAdminClick={handleAdminClick}
-          onOrdersClick={handleOrdersClick}
-        />
-        <div className="max-w-3xl mx-auto p-6 text-center">
-          <h2 className="text-2xl font-semibold text-red-600">Access Denied</h2>
-          <p className="mt-2 text-muted-foreground">You need to be an admin to access this page.</p>
-          <Button className="mt-4" onClick={() => navigate('/')}>
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+        <div className="max-w-3xl mx-auto px-4 py-6 text-center flex-grow">
+          <h2 className="text-xl font-semibold text-red-600">Access Denied</h2>
+          <p className="mt-2 text-xs text-muted-foreground">You need to be an admin to access this page.</p>
+          <Button className="mt-4 text-xs px-4 py-2" onClick={() => navigate('/')}>
             Return to Store
           </Button>
         </div>
@@ -225,16 +167,10 @@ export const OrderManager: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-        <Header
-          onLogin={handleLogin}
-          onLogout={logout}
-          onAdminClick={handleAdminClick}
-          onOrdersClick={handleOrdersClick}
-        />
-        <div className="max-w-3xl mx-auto p-6 text-center">
-          <Package className="mx-auto h-12 w-12 animate-spin" />
-          <p className="mt-2 text-muted-foreground">Loading orders...</p>
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+        <div className="max-w-3xl mx-auto px-4 py-6 text-center flex-grow">
+          <Package className="mx-auto h-10 w-10 animate-spin" />
+          <p className="mt-2 text-xs text-muted-foreground">Loading orders...</p>
         </div>
       </div>
     );
@@ -242,17 +178,11 @@ export const OrderManager: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-        <Header
-          onLogin={handleLogin}
-          onLogout={logout}
-          onAdminClick={handleAdminClick}
-          onOrdersClick={handleOrdersClick}
-        />
-        <div className="max-w-3xl mx-auto p-6 text-center">
-          <h2 className="text-2xl font-semibold text-red-600">Error</h2>
-          <p className="mt-2 text-muted-foreground">{error}</p>
-          <Button className="mt-4" onClick={() => navigate('/')}>
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+        <div className="max-w-3xl mx-auto px-4 py-6 text-center flex-grow">
+          <h2 className="text-xl font-semibold text-red-600">Error</h2>
+          <p className="mt-2 text-xs text-muted-foreground">{error}</p>
+          <Button className="mt-4 text-xs px-4 py-2" onClick={() => navigate('/')}>
             Return to Store
           </Button>
         </div>
@@ -261,43 +191,37 @@ export const OrderManager: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <Header
-        onLogin={handleLogin}
-        onLogout={logout}
-        onAdminClick={handleAdminClick}
-        onOrdersClick={handleOrdersClick}
-      />
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-grow space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Orders</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Orders</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Manage and track customer orders
             </p>
           </div>
         </div>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex gap-4 items-center">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search orders..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-xs sm:text-sm"
                 />
               </div>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48 text-xs sm:text-sm">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   {statusOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
+                    <SelectItem key={option.value} value={option.value} className="text-xs sm:text-sm">
                       {option.label}
                     </SelectItem>
                   ))}
@@ -309,128 +233,229 @@ export const OrderManager: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Orders ({filteredOrders.length})</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Orders ({filteredOrders.length})</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Recent orders from your customers
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Tax</TableHead>
-                  <TableHead>Shipping</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">
-                      {order.orderNumber || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{order.customer.name || 'N/A'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {order.customer.email || 'N/A'}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {order.items.slice(0, 2).map((item, index) => (
-                          <div key={index} className="text-sm">
-                            {item.quantity}x {item.name}
-                          </div>
-                        ))}
-                        {order.items.length > 2 && (
-                          <div className="text-sm text-muted-foreground">
-                            +{order.items.length - 2} more
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      ₹{order.totalAmount.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      ₹{(order.totalTax || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      ₹{(order.shippingCharge || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(order.status)}
-                    </TableCell>
-                    <TableCell>
-                      {getPaymentStatusBadge(order.paymentStatus)}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {formatDate(order.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleViewOrder(order)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleStatusUpdate(order.id, 'confirmed')}
-                            disabled={order.status !== 'pending' || !isAdmin}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Confirm Order
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleStatusUpdate(order.id, 'shipped')}
-                            disabled={!['confirmed', 'processing', 'packed'].includes(order.status) || !isAdmin}
-                          >
-                            <Truck className="h-4 w-4 mr-2" />
-                            Mark as Shipped
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            {/* Desktop View: Table */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs sm:text-sm">Order</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Customer</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Items</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Total</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Tax</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Shipping</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Payment</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Date</TableHead>
+                    <TableHead className="text-xs sm:text-sm text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium text-xs sm:text-sm">
+                        {order.orderNumber || 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-xs sm:text-sm">{order.customer.name || 'N/A'}</div>
+                          <div className="text-xs text-muted-foreground">{order.customer.email || 'N/A'}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {order.items.slice(0, 2).map((item, index) => (
+                            <div key={index} className="text-xs sm:text-sm">
+                              {item.quantity}x {item.name}
+                            </div>
+                          ))}
+                          {order.items.length > 2 && (
+                            <div className="text-xs text-muted-foreground">
+                              +{order.items.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm">
+                        ₹{order.totalAmount.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm">
+                        ₹{(order.totalTax || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm">
+                        ₹{(order.shippingCharge || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(order.status)}
+                      </TableCell>
+                      <TableCell>
+                        {getPaymentStatusBadge(order.paymentStatus)}
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm">
+                        {formatDate(order.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewOrder(order)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'confirmed')}
+                              disabled={order.status !== 'pending' || !isAdmin}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Confirm Order
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'shipped')}
+                              disabled={!['confirmed', 'processing', 'packed'].includes(order.status) || !isAdmin}
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              Mark as Shipped
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'delivered')}
+                              disabled={order.status !== 'shipped' || !isAdmin}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark as Delivered
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'pickup_return')}
+                              disabled={order.status !== 'return_initiated' || !isAdmin}
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              Arrange Pickup
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'returned')}
+                              disabled={order.status !== 'pickup_return' || !isAdmin}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark as Returned
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Mobile View: Card-based layout */}
+            <div className="sm:hidden space-y-4">
+              {filteredOrders.map((order) => (
+                <Card key={order.id}>
+                  <CardContent className="p-3">
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Order #{order.orderNumber || 'N/A'}</span>
+                        {getStatusBadge(order.status)}
+                      </div>
+                      <p><span className="font-medium">Customer:</span> {order.customer.name || 'N/A'}</p>
+                      <p><span className="font-medium">Email:</span> {order.customer.email || 'N/A'}</p>
+                      <p><span className="font-medium">Items:</span></p>
+                      {order.items.slice(0, 2).map((item, index) => (
+                        <p key={index} className="pl-2">{item.quantity}x {item.name}</p>
+                      ))}
+                      {order.items.length > 2 && (
+                        <p className="pl-2 text-muted-foreground">+{order.items.length - 2} more</p>
+                      )}
+                      <p><span className="font-medium">Total:</span> ₹{order.totalAmount.toFixed(2)}</p>
+                      <p><span className="font-medium">Tax:</span> ₹{(order.totalTax || 0).toFixed(2)}</p>
+                      <p><span className="font-medium">Shipping:</span> ₹{(order.shippingCharge || 0).toFixed(2)}</p>
+                      <p><span className="font-medium">Payment:</span> {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}</p>
+                      <p><span className="font-medium">Date:</span> {formatDate(order.createdAt)}</p>
+                      <div className="flex justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewOrder(order)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'confirmed')}
+                              disabled={order.status !== 'pending' || !isAdmin}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Confirm Order
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'shipped')}
+                              disabled={!['confirmed', 'processing', 'packed'].includes(order.status) || !isAdmin}
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              Mark as Shipped
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'delivered')}
+                              disabled={order.status !== 'shipped' || !isAdmin}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark as Delivered
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'pickup_return')}
+                              disabled={order.status !== 'return_initiated' || !isAdmin}
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              Arrange Pickup
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(order.id, 'returned')}
+                              disabled={order.status !== 'pickup_return' || !isAdmin}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark as Returned
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl sm:max-w-4xl">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">
                 Order Details - {selectedOrder?.orderNumber || 'N/A'}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-xs sm:text-sm">
                 Complete order information and management options
               </DialogDescription>
             </DialogHeader>
             
             {selectedOrder && (
-              <div className="grid gap-6">
-                <div className="grid grid-cols-2 gap-6">
+              <div className="grid gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-lg">Customer Information</CardTitle>
+                      <CardTitle className="text-base sm:text-lg">Customer Information</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2">
+                    <CardContent className="space-y-2 text-xs sm:text-sm">
                       <div>
                         <span className="font-medium">Name:</span> {selectedOrder.customer.name || 'N/A'}
                       </div>
@@ -445,9 +470,9 @@ export const OrderManager: React.FC = () => {
                   
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-lg">Shipping Address</CardTitle>
+                      <CardTitle className="text-base sm:text-lg">Shipping Address</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2">
+                    <CardContent className="space-y-2 text-xs sm:text-sm">
                       <div>{selectedOrder.shippingAddress.street || 'N/A'}</div>
                       <div>
                         {selectedOrder.shippingAddress.city || 'N/A'}, {selectedOrder.shippingAddress.state || 'N/A'} {selectedOrder.shippingAddress.zipCode || 'N/A'}
@@ -456,109 +481,165 @@ export const OrderManager: React.FC = () => {
                   </Card>
                 </div>
 
+                {(selectedOrder.cancellationReason || selectedOrder.returnReason) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base sm:text-lg">
+                        {selectedOrder.cancellationReason ? 'Cancellation Details' : 'Return Details'}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-xs sm:text-sm">
+                      {selectedOrder.cancellationReason && (
+                        <>
+                          <div>
+                            <span className="font-medium">Cancellation Reason:</span> {selectedOrder.cancellationReason}
+                          </div>
+                          <div>
+                            <span className="font-medium">Cancellation Message:</span> {selectedOrder.cancellationMessage || 'N/A'}
+                          </div>
+                        </>
+                      )}
+                      {selectedOrder.returnReason && (
+                        <>
+                          <div>
+                            <span className="font-medium">Return Reason:</span> {selectedOrder.returnReason.charAt(0).toUpperCase() + selectedOrder.returnReason.slice(1).replace('_', ' ')}
+                          </div>
+                          <div>
+                            <span className="font-medium">Return Message:</span> {selectedOrder.returnMessage || 'N/A'}
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Order Items</CardTitle>
+                    <CardTitle className="text-base sm:text-lg">Order Items</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Product</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Original Price</TableHead>
-                          <TableHead>Price</TableHead>
-                          <TableHead>Tax</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedOrder.items.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{item.name || 'N/A'}</TableCell>
-                            <TableCell>{item.quantity}</TableCell>
-                            <TableCell>₹{item.originalPrice.toFixed(2)}</TableCell>
-                            <TableCell>₹{item.price.toFixed(2)}</TableCell>
-                            <TableCell>₹{(item.taxAmount || 0).toFixed(2)}</TableCell>
-                            <TableCell className="text-right">
-                              ₹{(item.quantity * item.price).toFixed(2)}
+                    {/* Desktop View: Table */}
+                    <div className="hidden sm:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs sm:text-sm">Product</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Quantity</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Original Price</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Price</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Tax</TableHead>
+                            <TableHead className="text-xs sm:text-sm text-right">Total</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedOrder.items.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="text-xs sm:text-sm">{item.name || 'N/A'}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">{item.quantity}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">₹{item.originalPrice.toFixed(2)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">₹{item.price.toFixed(2)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">₹{(item.taxAmount || 0).toFixed(2)}</TableCell>
+                              <TableCell className="text-xs sm:text-sm text-right">
+                                ₹{(item.quantity * item.price).toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (without discount)</TableCell>
+                            <TableCell className="font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}
                             </TableCell>
                           </TableRow>
-                        ))}
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium">Subtotal (without discount)</TableCell>
-                          <TableCell className="font-medium">
-                            ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium">Subtotal (with discount)</TableCell>
-                          <TableCell className="font-medium">
-                            ₹{(selectedOrder.priceWithDiscount).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{(selectedOrder.priceWithDiscount).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium">Total Tax</TableCell>
-                          <TableCell className="font-medium">
-                            ₹{(selectedOrder.totalTax || 0).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{(selectedOrder.totalTax || 0).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium">Shipping</TableCell>
-                          <TableCell className="font-medium">
-                            ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium">Subtotal (with discount, tax, shipping)</TableCell>
-                          <TableCell className="font-medium">
-                            ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={4} className="font-medium">Total</TableCell>
-                          <TableCell className="font-medium">
-                            ₹{(selectedOrder.totalAmount).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{(selectedOrder.totalAmount).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (with discount)</TableCell>
+                            <TableCell className="font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.priceWithDiscount).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.priceWithDiscount).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Total Tax</TableCell>
+                            <TableCell className="font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.totalTax || 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.totalTax || 0).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Shipping</TableCell>
+                            <TableCell className="font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (with discount, tax, shipping)</TableCell>
+                            <TableCell className="font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Total</TableCell>
+                            <TableCell className="font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.totalAmount).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-xs sm:text-sm">
+                              ₹{(selectedOrder.totalAmount).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {/* Mobile View: Card-based layout */}
+                    <div className="sm:hidden space-y-2">
+                      {selectedOrder.items.map((item, index) => (
+                        <div key={index} className="border rounded-md p-2 text-xs">
+                          <p><span className="font-medium">Product:</span> {item.name || 'N/A'}</p>
+                          <p><span className="font-medium">Quantity:</span> {item.quantity}</p>
+                          <p><span className="font-medium">Original Price:</span> ₹{item.originalPrice.toFixed(2)}</p>
+                          <p><span className="font-medium">Price:</span> ₹{item.price.toFixed(2)}</p>
+                          <p><span className="font-medium">Tax:</span> ₹{(item.taxAmount || 0).toFixed(2)}</p>
+                          <p><span className="font-medium">Total:</span> ₹{(item.quantity * item.price).toFixed(2)}</p>
+                        </div>
+                      ))}
+                      <div className="border-t pt-2 text-xs">
+                        <p><span className="font-medium">Subtotal (without discount):</span> ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}</p>
+                        <p><span className="font-medium">Subtotal (with discount):</span> ₹{(selectedOrder.priceWithDiscount).toFixed(2)}</p>
+                        <p><span className="font-medium">Total Tax:</span> ₹{(selectedOrder.totalTax || 0).toFixed(2)}</p>
+                        <p><span className="font-medium">Shipping:</span> ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}</p>
+                        <p><span className="font-medium">Subtotal (with discount, tax, shipping):</span> ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}</p>
+                        <p><span className="font-medium">Total:</span> ₹{(selectedOrder.totalAmount).toFixed(2)}</p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
 
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">Status:</span>
+                      <span className="font-medium text-xs sm:text-sm">Status:</span>
                       {getStatusBadge(selectedOrder.status)}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">Payment:</span>
+                      <span className="font-medium text-xs sm:text-sm">Payment:</span>
                       {getPaymentStatusBadge(selectedOrder.paymentStatus)}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs sm:text-sm text-muted-foreground">
                       Order placed: {formatDate(selectedOrder.createdAt)}
                     </div>
                     {selectedOrder.deliveryDate && (
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs sm:text-sm text-muted-foreground">
                         Delivered: {formatDate(selectedOrder.deliveryDate)}
                       </div>
                     )}
@@ -570,12 +651,12 @@ export const OrderManager: React.FC = () => {
                       onValueChange={(value) => handleStatusUpdate(selectedOrder.id, value as Order['status'])}
                       disabled={!isAdmin}
                     >
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="w-full sm:w-48 text-xs sm:text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {statusOptions.slice(1).map(option => (
-                          <SelectItem key={option.value} value={option.value}>
+                          <SelectItem key={option.value} value={option.value} className="text-xs sm:text-sm">
                             {option.label}
                           </SelectItem>
                         ))}
@@ -590,10 +671,10 @@ export const OrderManager: React.FC = () => {
 
         {filteredOrders.length === 0 && (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Package className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No orders found</h3>
-              <p className="text-muted-foreground text-center">
+            <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16">
+              <Package className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-4" />
+              <h3 className="text-base sm:text-lg font-semibold mb-2">No orders found</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground text-center">
                 {searchTerm || statusFilter !== 'all' 
                   ? 'Try adjusting your search or filter criteria'
                   : 'Orders will appear here once customers start placing them'

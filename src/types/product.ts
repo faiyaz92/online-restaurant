@@ -56,6 +56,16 @@ export interface Cart {
   companyId: string;
 }
 
+export interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  priceAtPurchase: number;
+  taxAmount: number;
+  originalPrice: number;
+}
+
 export interface Order {
   id: string;
   orderNumber: string | null;
@@ -72,8 +82,8 @@ export interface Order {
   priceWithoutDiscount: number;
   priceWithDiscount: number;
   priceWithDiscountTaxShipping: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  status: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'delivered' | 'cancelled' | 'return_initiated' | 'pickup_return' | 'returned';
+  paymentStatus: 'pending' | 'completed' | 'failed';
   shippingAddress: {
     street: string;
     city: string;
@@ -84,17 +94,10 @@ export interface Order {
   updatedAt: string;
   companyId: string;
   deliveryDate?: string;
-}
-
-export interface OrderItem {
-  productId: string;
-  name: string;
-  quantity: number;
-  price: number;
-  taxAmount: number;
-  priceAtPurchase: number;
-  originalPrice: number;
-  variant?: ProductVariant;
+  cancellationReason?: string;
+  cancellationMessage?: string;
+  returnReason?: 'defective_product' | 'wrong_item' | 'not_as_described' | 'changed_mind' | 'other';
+  returnMessage?: string;
 }
 
 export interface OrderData {
@@ -113,6 +116,10 @@ export interface OrderData {
   orderNumber: string;
   createdAt: string;
   updatedAt: string;
+  cancellationReason?: string;
+  cancellationMessage?: string;
+  returnReason?: 'damaged' | 'not_liked' | 'other';
+  returnMessage?: string;
 }
 
 export interface Settings {

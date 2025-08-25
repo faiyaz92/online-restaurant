@@ -73,6 +73,10 @@ export const useFirebaseAdminOrders = () => {
             updatedAt: data.updatedAt || new Date().toISOString(),
             companyId: data.companyId || 'shopping_cart',
             deliveryDate: data.status === 'delivered' ? data.updatedAt || undefined : undefined,
+            cancellationReason: data.cancellationReason || undefined,
+            cancellationMessage: data.cancellationMessage || undefined,
+            returnReason: data.returnReason || undefined,
+            returnMessage: data.returnMessage || undefined,
           } as Order;
         });
         console.log('Fetched admin orders:', ordersData);
@@ -97,10 +101,14 @@ export const useFirebaseAdminOrders = () => {
         throw new Error('Invalid Firestore path for order');
       }
       const orderRef = doc(firestore, orderPath);
-      await updateDoc(orderRef, {
+      const updateData: any = {
         status: newStatus,
         updatedAt: new Date().toISOString(),
-      });
+      };
+      if (newStatus === 'delivered') {
+        updateData.deliveryDate = new Date().toISOString();
+      }
+      await updateDoc(orderRef, updateData);
       console.log(`Updated order ${orderId} status to ${newStatus}`);
       toast.success(`Order status updated to ${newStatus}`);
     } catch (err: any) {
