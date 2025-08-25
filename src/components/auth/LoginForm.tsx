@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserInfo } from '@/hooks/useUserInfo';
-import { useSignUp } from '@/hooks/useSignUp';
+import { useSignUp } from '@/hooks/useSignup';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
