@@ -46,6 +46,7 @@ const App = () => {
               <Route path="/orders" element={<OrderListPage />} />
               <Route path="/orders/:orderId" element={<OrderDetailsPage />} />
               <Route path="/checkout" element={<CheckoutForm onOrderComplete={handleOrderComplete} />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

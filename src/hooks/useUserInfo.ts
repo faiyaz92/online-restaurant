@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Role, UserType } from '@/types/auth';
 
 export const useUserInfo = () => {
-  const { userInfo, currentUser } = useAuth();
+  const { userInfo, currentUser, userInfoLoading } = useAuth(); // Add userInfoLoading
   
   const mapRoleToEnum = (role: string): Role => {
     if (role === 'admin') return Role.COMPANY_ADMIN;
@@ -10,13 +10,13 @@ export const useUserInfo = () => {
   };
   
   const mapUserTypeToEnum = (userType: string): UserType => {
-    if (userType === 'admin') return UserType.Employee;
+    if (userType === 'Employee') return UserType.Employee;
     return UserType.Customer; // default for customers
   };
   
   return {
     userId: userInfo?.id || '',
-    companyId: userInfo?.companyId || 'abc_pvt_ltd',
+    companyId: userInfo?.companyId || 'shopping_cart',
     role: mapRoleToEnum(userInfo?.role || 'customer'),
     userName: userInfo?.name || 'Guest User',
     isAuthenticated: !!currentUser,
@@ -24,6 +24,7 @@ export const useUserInfo = () => {
     name: userInfo?.name || 'Guest User',
     userType: mapUserTypeToEnum(userInfo?.userType || 'customer'),
     mobileNumber: userInfo?.mobileNumber || '',
-    address: userInfo?.address || ''
+    address: userInfo?.address || '',
+    loading: userInfoLoading, // Expose loading
   };
 };

@@ -17,7 +17,7 @@ import { useUserInfo } from '@/hooks/useUserInfo';
 import { Role } from '@/types/auth';
 
 interface HeaderProps {
-  onLogin: () => void;
+  onLogin?: () => void;
   onLogout: () => void;
   onAdminClick?: () => void;
   onOrdersClick: () => void;
@@ -41,6 +41,10 @@ export const Header: React.FC<HeaderProps> = ({
     { name: 'Our Products', path: '/products' },
     { name: 'Contact Us', path: '/contact-us' },
   ];
+
+  const handleLoginClick = () => {
+         navigate('/login');
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-gradient-to-r from-blue-950 to-gray-900 text-gray-200 border-b border-blue-900">
@@ -164,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
             </DropdownMenu>
           ) : (
             <Button
-              onClick={onLogin}
+              onClick={handleLoginClick}
               size="sm"
               className="h-9 rounded-md bg-blue-700 text-blue-100 hover:bg-blue-600"
             >
@@ -203,6 +207,17 @@ export const Header: React.FC<HeaderProps> = ({
                 {link.name}
               </button>
             ))}
+            {!userInfo.isAuthenticated && (
+              <button
+                onClick={() => {
+                  handleLoginClick();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="text-base font-medium text-gray-200 hover:text-blue-300 transition-colors text-left"
+              >
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       )}

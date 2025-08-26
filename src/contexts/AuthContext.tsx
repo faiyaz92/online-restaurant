@@ -34,6 +34,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (data: { displayName?: string }) => Promise<void>;
   loading: boolean;
+  userInfoLoading: boolean; // New: For tracking userInfo fetch
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,11 +55,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userInfoLoading, setUserInfoLoading] = useState(false); // New state
   const paths = useFirestorePaths('shopping_cart');
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
       console.log('Attempting login:', email);
+      setUserInfoLoading(true); // Start loading
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
@@ -67,27 +70,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userQuery = query(usersCollectionRef, where('email', '==', email));
       const userSnapshot = await getDocs(userQuery);
       
-      if (!userSnapshot.empty) {
-        const userData = userSnapshot.docs[0].data();
-        setUserInfo({
-          id: user.uid,
-          email: user.email || '',
-          name: userData.name || user.displayName || '',
-          role: userData.userType || 'customer',
-          userType: userData.userType || 'customer',
-          companyId: userData.companyId || 'abc_pvt_ltd',
-          mobileNumber: userData.mobileNumber || '',
-          address: userData.address || '',
-        });
-        console.log('User info set from Firestore:', user.uid);
-      } else {
+      if (userSnapshot.empty) {
         // Create user document if it doesn't exist - default to customer
         const newUserData = {
           email: user.email,
           name: user.displayName || '',
           userType: 'customer',
           role: 'customer',
-          companyId: 'abc_pvt_ltd',
+          companyId: 'shopping_cart',
           mobileNumber: '',
           address: '',
           createdAt: new Date().toISOString(),
@@ -96,30 +86,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         const userDocRef = doc(firestore, paths.getTenantUsersPath(), user.uid);
         await setDoc(userDocRef, newUserData);
-        
-        setUserInfo({
-          id: user.uid,
-          email: user.email || '',
-          name: newUserData.name,
-          role: 'customer',
-          userType: 'customer',
-          companyId: 'abc_pvt_ltd',
-          mobileNumber: '',
-          address: '',
-        });
         console.log('Created new user document in Firestore:', user.uid);
       }
+      // No setUserInfo here - listener will handle it
       toast.success('Login successful!');
     } catch (err: any) {
       console.error('Error during login:', err.message, err.code, err.stack);
       toast.error(`Failed to login: ${err.message}`);
       throw err;
+    } finally {
+      setUserInfoLoading(false); // End loading (though listener may override)
     }
   };
 
   const loginWithGoogle = async (): Promise<void> => {
     try {
       console.log('Attempting Google login');
+      setUserInfoLoading(true); // Start loading
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
@@ -135,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: user.displayName || '',
           userType: 'customer',
           role: 'customer',
-          companyId: 'abc_pvt_ltd',
+          companyId: 'shopping_cart',
           mobileNumber: '',
           address: '',
           createdAt: new Date().toISOString(),
@@ -143,37 +126,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
         
         await setDoc(userDocRef, newUserData);
-        
-        setUserInfo({
-          id: user.uid,
-          email: user.email || '',
-          name: newUserData.name,
-          role: 'customer',
-          userType: 'customer',
-          companyId: 'abc_pvt_ltd',
-          mobileNumber: '',
-          address: '',
-        });
         console.log('Created new Google user document in Firestore:', user.uid);
-      } else {
-        const userData = userDoc.data();
-        setUserInfo({
-          id: user.uid,
-          email: user.email || '',
-          name: userData.name || user.displayName || '',
-          role: userData.userType || 'customer',
-          userType: userData.userType || 'customer',
-          companyId: userData.companyId || 'abc_pvt_ltd',
-          mobileNumber: userData.mobileNumber || '',
-          address: userData.address || '',
-        });
-        console.log('User info set from Firestore for Google login:', user.uid);
       }
+      // No setUserInfo here - listener will handle it
       toast.success('Google login successful!');
     } catch (err: any) {
       console.error('Error during Google login:', err.message, err.code, err.stack);
       toast.error(`Failed to login with Google: ${err.message}`);
       throw err;
+    } finally {
+      setUserInfoLoading(false); // End loading
     }
   };
 
@@ -247,6 +209,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
+        setUserInfoLoading(true); // Start loading for fetch
         try {
           const userDocRef = doc(firestore, paths.getTenantUsersPath(), user.uid);
           const userDoc = await getDoc(userDocRef);
@@ -259,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               name: userData.name || user.displayName || '',
               role: userData.userType || 'customer',
               userType: userData.userType || 'customer',
-              companyId: userData.companyId || 'abc_pvt_ltd',
+              companyId: userData.companyId || 'shopping_cart',
               mobileNumber: userData.mobileNumber || '',
               address: userData.address || '',
             });
@@ -271,10 +234,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (err: any) {
           console.error('Error fetching user info on auth state change:', err.message, err.code, err.stack);
           toast.error(`Failed to fetch user info: ${err.message}`);
+        } finally {
+          setUserInfoLoading(false); // End loading
         }
       } else {
         setUserInfo(null);
-        console.log('No user signed in');
+        setUserInfoLoading(false);
       }
       setLoading(false);
     });
@@ -291,6 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     resetPassword,
     updateUserProfile,
     loading,
+    userInfoLoading, // Expose the new loading state
   };
 
   return (

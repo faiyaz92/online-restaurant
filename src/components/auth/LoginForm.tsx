@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserInfo } from '@/hooks/useUserInfo';
@@ -11,7 +11,6 @@ import { AlertCircle, Loader2, Eye, EyeOff, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import { Role, UserType } from '@/types/auth';
 
-// Google Icon SVG
 const GoogleIcon = () => (
   <svg
     width="20"
@@ -51,19 +50,35 @@ const LoginForm = () => {
   const userInfo = useUserInfo();
   const navigate = useNavigate();
 
-  // Redirect if already logged in based on user type and role
-  if (currentUser && userInfo.isAuthenticated) {
-    if (userInfo.userType === UserType.Customer) {
-      return <Navigate to="/" replace />;
-    } else if (userInfo.userType === UserType.Employee && 
-               (userInfo.role === Role.COMPANY_ADMIN || 
-                userInfo.role === Role.STORE_ADMIN || 
-                userInfo.role === Role.STORE_MANAGER)) {
-      return <Navigate to="/admin" replace />;
-    }
-    return <Navigate to="/" replace />;
-  }
+  // // Redirect if already logged in based on user type and role
+  // if (currentUser && userInfo.isAuthenticated && !userInfo.loading) {
+  //   console.log('Initial render redirect check:', { userType: userInfo.userType });
+  //   if (userInfo.userType === UserType.Customer) {
+  //     return <Navigate to="/" replace />;
+  //   } else if (userInfo.userType === UserType.Employee) {
+  //     return <Navigate to="/admin" replace />;
+  //   }
+  //   return <Navigate to="/" replace />;
+  // }
 
+  // Effect to handle redirect after userInfo updates
+   useEffect(() => {
+  if (currentUser && userInfo.isAuthenticated && !userInfo.loading) {
+    // Add a small delay to ensure all state is updated
+    const timer = setTimeout(() => {
+      console.log('Redirecting based on userType:', userInfo.userType);
+      if (userInfo.userType === UserType.Customer) {
+        navigate('/', { replace: true });
+      } else if (userInfo.userType === UserType.Employee) {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }
+}, [currentUser, userInfo.isAuthenticated, userInfo.userType, userInfo.loading, navigate]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -75,22 +90,9 @@ const LoginForm = () => {
     setLoading(true);
     try {
       await login(email, password);
-      console.log('Email login successful');
+      console.log('Email login successful, currentUser:', !!currentUser, 'userInfo:', userInfo);
       toast.success('Login successful!');
-      
-      // Wait a moment for userInfo to update, then redirect based on role
-      setTimeout(() => {
-        if (userInfo.userType === UserType.Customer) {
-          navigate('/');
-        } else if (userInfo.userType === UserType.Employee && 
-                   (userInfo.role === Role.COMPANY_ADMIN || 
-                    userInfo.role === Role.STORE_ADMIN || 
-                    userInfo.role === Role.STORE_MANAGER)) {
-          navigate('/admin');
-        } else {
-          navigate('/');
-        }
-      }, 1000);
+      // No manual set loading here - context handles it
     } catch (error: any) {
       console.error('Login error:', error.message, error.code, error.stack);
       let errorMessage = 'Login failed. Please try again.';
@@ -145,22 +147,9 @@ const LoginForm = () => {
     setLoading(true);
     try {
       await signUpWithGoogle();
-      console.log('Google sign-in successful');
+      console.log('Google sign-in successful, currentUser:', !!currentUser, 'userInfo:', userInfo);
       toast.success('Google sign-in successful!');
-      
-      // Wait a moment for userInfo to update, then redirect based on role
-      setTimeout(() => {
-        if (userInfo.userType === UserType.Customer) {
-          navigate('/');
-        } else if (userInfo.userType === UserType.Employee && 
-                   (userInfo.role === Role.COMPANY_ADMIN || 
-                    userInfo.role === Role.STORE_ADMIN || 
-                    userInfo.role === Role.STORE_MANAGER)) {
-          navigate('/admin');
-        } else {
-          navigate('/');
-        }
-      }, 1000);
+      // No manual set loading here - context handles it
     } catch (error: any) {
       console.error('Google sign-in error:', error.message, error.code, error.stack);
       let errorMessage = 'Google sign-in failed. Please try again.';
@@ -176,6 +165,20 @@ const LoginForm = () => {
       setLoading(false);
     }
   };
+
+  // Show loading UI while user info is being fetched
+  if (userInfo.loading && currentUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-primary p-4">
+        <Card className="w-full max-w-md shadow-elevation">
+          <CardContent className="flex items-center justify-center p-6">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading user information...</span>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-primary p-4">
