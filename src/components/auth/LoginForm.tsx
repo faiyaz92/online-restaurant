@@ -50,17 +50,6 @@ const LoginForm = () => {
   const userInfo = useUserInfo();
   const navigate = useNavigate();
 
-  // // Redirect if already logged in based on user type and role
-  // if (currentUser && userInfo.isAuthenticated && !userInfo.loading) {
-  //   console.log('Initial render redirect check:', { userType: userInfo.userType });
-  //   if (userInfo.userType === UserType.Customer) {
-  //     return <Navigate to="/" replace />;
-  //   } else if (userInfo.userType === UserType.Employee) {
-  //     return <Navigate to="/admin" replace />;
-  //   }
-  //   return <Navigate to="/" replace />;
-  // }
-
   // Effect to handle redirect after userInfo updates
    useEffect(() => {
   if (currentUser && userInfo.isAuthenticated && !userInfo.loading) {
