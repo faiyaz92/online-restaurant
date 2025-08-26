@@ -14,10 +14,10 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { AboutUs } from "./pages/AboutUsPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { ContactUs } from "./pages/ContactUsPage";
-import { SignUp } from "./pages/SignupPage";
 import LoginForm from "./components/auth/LoginForm";
 import NotFound from "./pages/NotFound";
 import { CheckoutForm } from './pages/CheckoutForm';
+import { SignUp } from './pages/SignUpPage';
 
 const queryClient = new QueryClient();
 
