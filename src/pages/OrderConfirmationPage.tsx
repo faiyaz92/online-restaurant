@@ -49,7 +49,6 @@ export const OrderConfirmationPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
         <Header
-          onCartClick={handleCartClick}
           onLogin={handleLogin}
           onLogout={logout}
           onAdminClick={handleAdminClick}
@@ -71,7 +70,6 @@ export const OrderConfirmationPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <Header
-        onCartClick={handleCartClick}
         onLogin={handleLogin}
         onLogout={logout}
         onAdminClick={handleAdminClick}
