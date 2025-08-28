@@ -11,6 +11,8 @@ import {
 } from 'firebase/auth';
 import { auth, firestore } from '@/config/firebase';
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { extractNameFromEmail } from '@/lib/utils';
+import { Role, UserType } from '@/types/auth';
 import { useFirestorePaths } from '@/hooks/useFirestorePaths';
 import { toast } from 'sonner';
 
@@ -60,42 +62,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      console.log('Attempting login:', email);
-      setUserInfoLoading(true); // Start loading
+      setUserInfoLoading(true);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
-      // Search for user in the tenant company users collection
-      const usersCollectionRef = collection(firestore, paths.getTenantUsersPath());
-      const userQuery = query(usersCollectionRef, where('email', '==', email));
-      const userSnapshot = await getDocs(userQuery);
-      
-      if (userSnapshot.empty) {
-        // Create user document if it doesn't exist - default to customer
+
+      // Always ensure Firestore user document exists and is up-to-date
+      const userDocRef = doc(firestore, paths.getTenantUsersPath(), user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        // Create user document if it doesn't exist
         const newUserData = {
           email: user.email,
-          name: user.displayName || '',
-          userType: 'customer',
-          role: 'customer',
+          name: user.displayName || user.email?.split('@')[0] || '',
+          userType: UserType.Customer,
+          role: Role.CUSTOMER,
           companyId: 'shopping_cart',
           mobileNumber: '',
           address: '',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        
-        const userDocRef = doc(firestore, paths.getTenantUsersPath(), user.uid);
         await setDoc(userDocRef, newUserData);
-        console.log('Created new user document in Firestore:', user.uid);
+      } else {
+        // Optionally update missing fields if needed
+        const data = userDoc.data();
+        let needsUpdate = false;
+        const updateData: any = {};
+        if (!data.email && user.email) { updateData.email = user.email; needsUpdate = true; }
+        if (!data.name && user.displayName) { updateData.name = user.displayName; needsUpdate = true; }
+        if (needsUpdate) {
+          updateData.updatedAt = new Date().toISOString();
+          await setDoc(userDocRef, updateData, { merge: true });
+        }
       }
-      // No setUserInfo here - listener will handle it
       toast.success('Login successful!');
     } catch (err: any) {
-      console.error('Error during login:', err.message, err.code, err.stack);
       toast.error(`Failed to login: ${err.message}`);
       throw err;
     } finally {
-      setUserInfoLoading(false); // End loading (though listener may override)
+      setUserInfoLoading(false);
     }
   };
 
@@ -112,19 +118,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        // Create user document for new Google user
+        // Extract name/username from email if displayName is not available
+        let name = user.displayName || '';
+        let username = '';
+        if (!name && user.email) {
+          name = extractNameFromEmail(user.email);
+        }
+        if (user.email) {
+          username = extractNameFromEmail(user.email);
+        }
         const newUserData = {
           email: user.email,
-          name: user.displayName || '',
-          userType: 'customer',
-          role: 'customer',
+          name: name,
+          username: username,
+          userType: UserType.Customer,
+          role: Role.CUSTOMER,
           companyId: 'shopping_cart',
           mobileNumber: '',
           address: '',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        
         await setDoc(userDocRef, newUserData);
         console.log('Created new Google user document in Firestore:', user.uid);
       }
@@ -220,8 +234,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               id: user.uid,
               email: user.email || '',
               name: userData.name || user.displayName || '',
-              role: userData.userType || 'customer',
-              userType: userData.userType || 'customer',
+              role: userData.role || Role.CUSTOMER,
+              userType: userData.userType || UserType.Customer,
               companyId: userData.companyId || 'shopping_cart',
               mobileNumber: userData.mobileNumber || '',
               address: userData.address || '',

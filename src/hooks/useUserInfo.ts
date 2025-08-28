@@ -4,14 +4,18 @@ import { Role, UserType } from '@/types/auth';
 export const useUserInfo = () => {
   const { userInfo, currentUser, userInfoLoading } = useAuth(); // Add userInfoLoading
   
-  const mapRoleToEnum = (role: string): Role => {
-    if (role === 'admin') return Role.COMPANY_ADMIN;
-    return Role.COMPANY_ADMIN; // default
+  const mapRoleToEnum = (role: string | Role): Role => {
+    if (role === Role.COMPANY_ADMIN || role === 'admin') return Role.COMPANY_ADMIN;
+    if (role === Role.CUSTOMER || role === 'customer') return Role.CUSTOMER;
+    if (typeof role === 'string' && Object.values(Role).includes(role as Role)) return role as Role;
+    return Role.CUSTOMER;
   };
-  
-  const mapUserTypeToEnum = (userType: string): UserType => {
-    if (userType === 'Employee') return UserType.Employee;
-    return UserType.Customer; // default for customers
+
+  const mapUserTypeToEnum = (userType: string | UserType): UserType => {
+    if (userType === UserType.Employee || userType === 'Employee' || userType === 'admin') return UserType.Employee;
+    if (userType === UserType.Customer || userType === 'Customer' || userType === 'customer') return UserType.Customer;
+    if (typeof userType === 'string' && Object.values(UserType).includes(userType as UserType)) return userType as UserType;
+    return UserType.Customer;
   };
   
   return {
