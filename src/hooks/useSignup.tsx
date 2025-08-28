@@ -43,9 +43,21 @@ export const useSignUp = () => {
       if (!password) {
         throw new Error('Password is required');
       }
+      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateUserProfile({ displayName: name });
-      await saveUserToFirestore(userCredential.user, { name, email, mobileNumber });
+
+      // 2. Save user in Firestore under company, using sanitized email as doc ID
+      const docId = sanitizeEmail(email);
+      await setDoc(doc(firestore, paths.getTenantUserPath(docId)), {
+        uid: userCredential.user.uid,
+        name,
+        email,
+        mobileNumber,
+        userType: UserType.Customer,
+        role: Role.CUSTOMER,
+        createdAt: new Date().toISOString(),
+      });
+
       toast.success('Sign-up successful! Please sign in.');
       // DO NOT save anything to localStorage here!
       return userCredential.user;
