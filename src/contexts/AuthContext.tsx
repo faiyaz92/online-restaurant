@@ -240,6 +240,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               mobileNumber: userData.mobileNumber || '',
               address: userData.address || '',
             });
+            localStorage.setItem('userInfo', JSON.stringify({
+              id: user.uid,
+              email: user.email || '',
+              name: userData.name || user.displayName || '',
+              role: userData.role || Role.CUSTOMER,
+              userType: userData.userType || UserType.Customer,
+              companyId: userData.companyId || 'shopping_cart',
+              mobileNumber: userData.mobileNumber || '',
+              address: userData.address || '',
+            }));
             console.log('User info set on auth state change:', user.uid);
           } else {
             setUserInfo(null);

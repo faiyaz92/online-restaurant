@@ -51,23 +51,36 @@ const LoginForm = () => {
   const navigate = useNavigate();
 
   // Effect to handle redirect after userInfo updates
-   useEffect(() => {
-  if (currentUser && userInfo.isAuthenticated && !userInfo.loading) {
-    // Add a small delay to ensure all state is updated
-    const timer = setTimeout(() => {
-      console.log('Redirecting based on userType:', userInfo.userType);
-      if (userInfo.userType === UserType.Customer) {
-        navigate('/', { replace: true });
-      } else if (userInfo.userType === UserType.Employee) {
-        navigate('/admin', { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }
-}, [currentUser, userInfo.isAuthenticated, userInfo.userType, userInfo.loading, navigate]);
+  useEffect(() => {
+    // Only navigate when userInfo is loaded and user is authenticated
+    if (
+      currentUser &&
+      userInfo.isAuthenticated &&
+      !userInfo.loading &&
+      userInfo.userType // Make sure userType is available
+    ) {
+      // Add a small delay to ensure all state is updated (optional, but helps)
+      const timer = setTimeout(() => {
+        console.log('Redirecting based on userType:', userInfo.userType);
+        if (userInfo.userType === UserType.Customer) {
+          navigate('/', { replace: true });
+        } else if (userInfo.userType === UserType.Employee) {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [
+    currentUser,
+    userInfo.isAuthenticated,
+    userInfo.userType,
+    userInfo.loading,
+    navigate,
+  ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     

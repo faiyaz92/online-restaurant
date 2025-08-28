@@ -5,6 +5,7 @@ import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } f
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, firestore } from '@/config/firebase';
 import { Role, UserType } from '@/types/auth';
+import { useFirestorePaths } from '@/hooks/useFirestorePaths';
 
 interface SignUpData {
   name: string;
@@ -18,16 +19,20 @@ export const useSignUp = () => {
   const [error, setError] = useState<string | null>(null);
   const { updateUserProfile } = useAuth();
 
+  const companyId = 'shopping_cart'; // Or get dynamically if needed
+  const paths = useFirestorePaths(companyId);
+
   const saveUserToFirestore = async (user: any, data: Partial<SignUpData>) => {
     try {
       console.log('Saving user to Firestore:', user.uid, data);
-      await setDoc(doc(firestore, 'users', user.uid), {
+      // Save user under the company users collection
+      await setDoc(doc(firestore, paths.getTenantUserPath(user.uid)), {
         uid: user.uid,
         name: data.name || user.displayName || 'Anonymous',
         email: data.email || user.email,
         mobileNumber: data.mobileNumber || '',
         userType: UserType.Customer,
-        role: Role.MANAGER,
+        role: Role.CUSTOMER,
         createdAt: new Date().toISOString(),
       });
       console.log('Successfully saved user to Firestore:', user.uid);
