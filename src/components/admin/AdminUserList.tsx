@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
-import { firestore } from '@/config/firebase';
+import { firestore, auth } from '@/config/firebase';
+import { createUserWithEmailAndPassword, getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { useFirestorePaths } from '@/hooks/useFirestorePaths';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -139,16 +140,56 @@ const AdminUserList: React.FC = () => {
         }, { merge: true });
         toast.success('User updated');
       } else {
-        // Add user (signup logic)
-        // You may want to call your signup hook here for auth creation
-        // For now, just add to Firestore
-        const newUserRef = doc(collection(firestore, paths.getTenantUsersPath()));
-        await setDoc(newUserRef, {
+        // Add user: first check if user exists in Firebase Auth
+        const authInstance = getAuth();
+        let userUid = null;
+        try {
+          // Check if user exists in Firebase Auth
+          const signInMethods = await fetchSignInMethodsForEmail(authInstance, form.email);
+          if (signInMethods.length === 0) {
+            // User does not exist, create in Auth
+            const userCredential = await createUserWithEmailAndPassword(authInstance, form.email, form.password);
+            userUid = userCredential.user.uid;
+          } else {
+            // User exists in Auth, get their UID by querying Firestore 'users' collection
+            // (You may have a central users collection, or you can only add to company list)
+            // We'll try to find the user in company list by email
+            const usersRef = collection(firestore, paths.getTenantUsersPath());
+            const snapshot = await getDocs(usersRef);
+            let found = false;
+            snapshot.forEach(docSnap => {
+              const data = docSnap.data();
+              if (data.email === form.email) {
+                found = true;
+                userUid = docSnap.id;
+              }
+            });
+            if (found) {
+              toast.error('User already exists in this company list.');
+              setFormLoading(false);
+              return;
+            }
+            // If not found in company list, we will add
+            // But we need a UID. We'll use email as doc id (not ideal, but fallback)
+            userUid = undefined; // Will let Firestore auto-generate if not found
+          }
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to check user in Auth');
+          setFormLoading(false);
+          return;
+        }
+        // Add to Firestore company user list
+        let userDocRef;
+        if (userUid) {
+          userDocRef = doc(firestore, paths.getTenantUserPath(userUid));
+        } else {
+          userDocRef = doc(collection(firestore, paths.getTenantUsersPath()));
+        }
+        await setDoc(userDocRef, {
           name: form.name,
           email: form.email,
           userType: form.userType,
           role: form.role,
-          password: form.password, // In real app, never store plain password
           createdAt: new Date().toISOString(),
         });
         toast.success('User added');
