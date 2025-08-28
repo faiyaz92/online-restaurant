@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, firestore } from '@/config/firebase';
 import { Role, UserType } from '@/types/auth';
 import { useFirestorePaths } from '@/hooks/useFirestorePaths';
@@ -23,24 +23,15 @@ export const useSignUp = () => {
   const paths = useFirestorePaths(companyId);
 
   const saveUserToFirestore = async (user: any, data: Partial<SignUpData>) => {
-    try {
-      console.log('Saving user to Firestore:', user.uid, data);
-      // Save user under the company users collection
-      await setDoc(doc(firestore, paths.getTenantUserPath(user.uid)), {
-        uid: user.uid,
-        name: data.name || user.displayName || 'Anonymous',
-        email: data.email || user.email,
-        mobileNumber: data.mobileNumber || '',
-        userType: UserType.Customer,
-        role: Role.CUSTOMER,
-        createdAt: new Date().toISOString(),
-      });
-      console.log('Successfully saved user to Firestore:', user.uid);
-    } catch (err: any) {
-      console.error('Error saving user to Firestore:', err.message, err.code, err.stack);
-      toast.error(`Failed to save user data: ${err.message}`);
-      throw new Error(`Failed to save user data: ${err.message}`);
-    }
+    await setDoc(doc(firestore, paths.getTenantUserPath(user.uid)), {
+      uid: user.uid,
+      name: data.name || user.displayName || 'Anonymous',
+      email: data.email || user.email,
+      mobileNumber: data.mobileNumber || '',
+      userType: UserType.Customer,
+      role: Role.CUSTOMER,
+      createdAt: new Date().toISOString(),
+    });
   };
 
   const signUpWithEmail = async ({ name, email, mobileNumber, password }: SignUpData) => {
@@ -48,18 +39,15 @@ export const useSignUp = () => {
     setError(null);
     try {
       if (!password) {
-        console.error('Password is required for email sign-up');
         throw new Error('Password is required');
       }
-      console.log('Attempting email sign-up:', email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateUserProfile({ displayName: name });
       await saveUserToFirestore(userCredential.user, { name, email, mobileNumber });
-      console.log('Email sign-up successful:', userCredential.user.uid);
       toast.success('Sign-up successful! Please sign in.');
+      // DO NOT save anything to localStorage here!
       return userCredential.user;
     } catch (error: any) {
-      console.error('Error during email sign-up:', error.message, error.code, error.stack);
       let errorMessage = 'Sign-up failed. Please try again.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Email already in use.';
@@ -70,6 +58,7 @@ export const useSignUp = () => {
       }
       setError(errorMessage);
       toast.error(`Failed to sign up: ${errorMessage}`);
+      // DO NOT save anything to localStorage here!
       throw error;
     } finally {
       setLoading(false);
@@ -83,14 +72,35 @@ export const useSignUp = () => {
       console.log('Attempting Google sign-up');
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
-      await saveUserToFirestore(userCredential.user, {
-        name: userCredential.user.displayName || '',
-        email: userCredential.user.email || '',
-        mobileNumber: '',
-      });
-      console.log('Google sign-up successful:', userCredential.user.uid);
-      toast.success('Google sign-up successful! Please sign in.');
-      return userCredential.user;
+      const user = userCredential.user;
+      const userDocRef = doc(firestore, paths.getTenantUserPath(user.uid));
+      const userDoc = await getDoc(userDocRef);
+
+      let userInfo;
+      if (userDoc.exists()) {
+        // User exists, use Firestore info
+        userInfo = userDoc.data();
+      } else {
+        // User does not exist, create as customer
+        await saveUserToFirestore(user, {
+          name: user.displayName || '',
+          email: user.email || '',
+          mobileNumber: '',
+        });
+        userInfo = {
+          uid: user.uid,
+          name: user.displayName || '',
+          email: user.email || '',
+          mobileNumber: '',
+          userType: UserType.Customer,
+          role: Role.CUSTOMER,
+        };
+      }
+
+      // Save userInfo to localStorage for session
+      localStorage.setItem('userInfo', JSON.stringify(userInfo));
+      toast.success('Google sign-in successful! Please continue.');
+      return user;
     } catch (error: any) {
       console.error('Error during Google sign-up:', error.message, error.code, error.stack);
       let errorMessage = 'Google sign-up failed. Please try again.';
