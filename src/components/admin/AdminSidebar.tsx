@@ -20,17 +20,19 @@ import {
   FolderOpen,
   BarChart3,
   Tag,
+  Settings,
+  MessageSquare,
 } from 'lucide-react';
-import { Settings } from 'lucide-react';
 
 const menuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'Products', url: '/admin/products', icon: Package },
   { title: 'Categories', url: '/admin/categories', icon: FolderOpen },
   { title: 'Orders', url: '/admin/orders', icon: ShoppingCart },
-  { title: 'Customers', url: '/admin/customers', icon: Users },
+  { title: 'Users', url: '/admin/users', icon: Users }, // Replaced 'Customers' with 'Users'
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Promotions', url: '/admin/promotions', icon: Tag },
+  { title: 'Inquiries', url: '/admin/inquiries', icon: MessageSquare },
   { title: 'Settings', url: '/admin/settings', icon: Settings },
 ];
 

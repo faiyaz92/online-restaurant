@@ -49,7 +49,7 @@ export const ContactUs: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 text-gray-200 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
       <Header
         onLogin={handleLogin}
         onLogout={logout}
@@ -72,7 +72,7 @@ export const ContactUs: React.FC = () => {
                   placeholder="Your Name"
                   required
                   disabled={loading}
-                  className="bg-background border-border text-gray-200"
+                  className="bg-background border-border" // Removed text-gray-200
                 />
               </div>
               <div className="space-y-2">
@@ -85,7 +85,7 @@ export const ContactUs: React.FC = () => {
                   placeholder="+1234567890"
                   required
                   disabled={loading}
-                  className="bg-background border-border text-gray-200"
+                  className="bg-background border-border" // Removed text-gray-200
                 />
               </div>
               <div className="space-y-2">
@@ -98,7 +98,7 @@ export const ContactUs: React.FC = () => {
                   placeholder="you@example.com"
                   required
                   disabled={loading}
-                  className="bg-background border-border text-gray-200"
+                  className="bg-background border-border" // Removed text-gray-200
                 />
               </div>
               <div className="space-y-2">
@@ -108,10 +108,10 @@ export const ContactUs: React.FC = () => {
                   onValueChange={(value: 'Become Seller' | 'Other' | 'Complaint') => setMessageType(value)}
                   disabled={loading}
                 >
-                  <SelectTrigger className="bg-background border-border text-gray-200">
+                  <SelectTrigger className="bg-background border-border">
                     <SelectValue placeholder="Select message type" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border-border text-gray-200">
+                  <SelectContent className="bg-background border-border">
                     <SelectItem value="Become Seller">Become Seller</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
                     <SelectItem value="Complaint">Complaint</SelectItem>
@@ -125,7 +125,7 @@ export const ContactUs: React.FC = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Your message..."
-                  className="w-full p-2 rounded-md bg-background border border-border text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full p-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary" // Removed text-gray-200
                   rows={5}
                   required
                   disabled={loading}
