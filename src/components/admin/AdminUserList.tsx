@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Loader2, Edit, Trash, Plus } from 'lucide-react';
 import { Role, UserType } from '@/types/auth';
 import { toast } from 'sonner';
-
+import {sanitizeEmail} from '@/lib/utils';
 interface UserListItem {
   id: string;
   name: string;
@@ -185,6 +185,8 @@ const AdminUserList: React.FC = () => {
         } else {
           userDocRef = doc(collection(firestore, paths.getTenantUsersPath()));
         }
+        const docId = sanitizeEmail(form.email);
+        userDocRef = doc(firestore, paths.getTenantUserPath(docId));
         await setDoc(userDocRef, {
           name: form.name,
           email: form.email,
@@ -365,3 +367,5 @@ const AdminUserList: React.FC = () => {
 };
 
 export default AdminUserList;
+
+

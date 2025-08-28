@@ -6,6 +6,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, firestore } from '@/config/firebase';
 import { Role, UserType } from '@/types/auth';
 import { useFirestorePaths } from '@/hooks/useFirestorePaths';
+import { sanitizeEmail } from '@/lib/utils';
 
 interface SignUpData {
   name: string;
@@ -23,7 +24,8 @@ export const useSignUp = () => {
   const paths = useFirestorePaths(companyId);
 
   const saveUserToFirestore = async (user: any, data: Partial<SignUpData>) => {
-    await setDoc(doc(firestore, paths.getTenantUserPath(user.uid)), {
+    const docId = sanitizeEmail(user.email);
+    await setDoc(doc(firestore, paths.getTenantUserPath(docId)), {
       uid: user.uid,
       name: data.name || user.displayName || 'Anonymous',
       email: data.email || user.email,
