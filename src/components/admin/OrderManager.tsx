@@ -12,13 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Table,
   TableBody,
   TableCell,
@@ -55,8 +48,6 @@ export const OrderManager: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   const isAdmin = true;
 
@@ -136,13 +127,7 @@ export const OrderManager: React.FC = () => {
   };
 
   const handleViewOrder = (order: Order) => {
-    setSelectedOrder(order);
-    setIsDetailDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsDetailDialogOpen(false);
-    setSelectedOrder(null); // Clear selected order to prevent stale state
+    navigate(`/admin/order-details/${order.id}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -440,238 +425,6 @@ export const OrderManager: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        <Dialog open={isDetailDialogOpen} onOpenChange={handleCloseDialog}>
-          <DialogContent className="max-w-3xl sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">
-                Order Details - {selectedOrder?.orderNumber || 'N/A'}
-              </DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm">
-                Complete order information and management options
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedOrder && (
-              <div className="grid gap-4 sm:gap-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base sm:text-lg">Customer Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-xs sm:text-sm">
-                      <div>
-                        <span className="font-medium">Name:</span> {selectedOrder.customer.name || 'N/A'}
-                      </div>
-                      <div>
-                        <span className="font-medium">Email:</span> {selectedOrder.customer.email || 'N/A'}
-                      </div>
-                      <div>
-                        <span className="font-medium">Phone:</span> {selectedOrder.customer.phone || 'N/A'}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base sm:text-lg">Shipping Address</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-xs sm:text-sm">
-                      <div>{selectedOrder.shippingAddress.street || 'N/A'}</div>
-                      <div>
-                        {selectedOrder.shippingAddress.city || 'N/A'}, {selectedOrder.shippingAddress.state || 'N/A'} {selectedOrder.shippingAddress.zipCode || 'N/A'}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {(selectedOrder.cancellationReason || selectedOrder.returnReason) && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base sm:text-lg">
-                        {selectedOrder.cancellationReason ? 'Cancellation Details' : 'Return Details'}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-xs sm:text-sm">
-                      {selectedOrder.cancellationReason && (
-                        <>
-                          <div>
-                            <span className="font-medium">Cancellation Reason:</span> {selectedOrder.cancellationReason}
-                          </div>
-                          <div>
-                            <span className="font-medium">Cancellation Message:</span> {selectedOrder.cancellationMessage || 'N/A'}
-                          </div>
-                        </>
-                      )}
-                      {selectedOrder.returnReason && (
-                        <>
-                          <div>
-                            <span className="font-medium">Return Reason:</span> {selectedOrder.returnReason.charAt(0).toUpperCase() + selectedOrder.returnReason.slice(1).replace('_', ' ')}
-                          </div>
-                          <div>
-                            <span className="font-medium">Return Message:</span> {selectedOrder.returnMessage || 'N/A'}
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base sm:text-lg">Order Items</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Desktop View: Table */}
-                    <div className="hidden sm:block">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="text-xs sm:text-sm">Product</TableHead>
-                            <TableHead className="text-xs sm:text-sm">Quantity</TableHead>
-                            <TableHead className="text-xs sm:text-sm">Original Price</TableHead>
-                            <TableHead className="text-xs sm:text-sm">Price</TableHead>
-                            <TableHead className="text-xs sm:text-sm">Tax</TableHead>
-                            <TableHead className="text-xs sm:text-sm text-right">Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {selectedOrder.items.map((item, index) => (
-                            <TableRow key={index}>
-                              <TableCell className="text-xs sm:text-sm">{item.name || 'N/A'}</TableCell>
-                              <TableCell className="text-xs sm:text-sm">{item.quantity}</TableCell>
-                              <TableCell className="text-xs sm:text-sm">₹{item.originalPrice.toFixed(2)}</TableCell>
-                              <TableCell className="text-xs sm:text-sm">₹{item.price.toFixed(2)}</TableCell>
-                              <TableCell className="text-xs sm:text-sm">₹{(item.taxAmount || 0).toFixed(2)}</TableCell>
-                              <TableCell className="text-xs sm:text-sm text-right">
-                                ₹{(item.quantity * item.price).toFixed(2)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          <TableRow>
-                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (without discount)</TableCell>
-                            <TableCell className="font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (with discount)</TableCell>
-                            <TableCell className="font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.priceWithDiscount).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.priceWithDiscount).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Total Tax</TableCell>
-                            <TableCell className="font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.totalTax || 0).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.totalTax || 0).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Shipping</TableCell>
-                            <TableCell className="font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Subtotal (with discount, tax, shipping)</TableCell>
-                            <TableCell className="font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={4} className="font-medium text-xs sm:text-sm">Total</TableCell>
-                            <TableCell className="font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.totalAmount).toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-xs sm:text-sm">
-                              ₹{(selectedOrder.totalAmount).toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                    {/* Mobile View: Card-based layout */}
-                    <div className="sm:hidden space-y-2">
-                      {selectedOrder.items.map((item, index) => (
-                        <div key={index} className="border rounded-md p-2 text-xs">
-                          <p><span className="font-medium">Product:</span> {item.name || 'N/A'}</p>
-                          <p><span className="font-medium">Quantity:</span> {item.quantity}</p>
-                          <p><span className="font-medium">Original Price:</span> ₹{item.originalPrice.toFixed(2)}</p>
-                          <p><span className="font-medium">Price:</span> ₹{item.price.toFixed(2)}</p>
-                          <p><span className="font-medium">Tax:</span> ₹{(item.taxAmount || 0).toFixed(2)}</p>
-                          <p><span className="font-medium">Total:</span> ₹{(item.quantity * item.price).toFixed(2)}</p>
-                        </div>
-                      ))}
-                      <div className="border-t pt-2 text-xs">
-                        <p><span className="font-medium">Subtotal (without discount):</span> ₹{(selectedOrder.priceWithoutDiscount).toFixed(2)}</p>
-                        <p><span className="font-medium">Subtotal (with discount):</span> ₹{(selectedOrder.priceWithDiscount).toFixed(2)}</p>
-                        <p><span className="font-medium">Total Tax:</span> ₹{(selectedOrder.totalTax || 0).toFixed(2)}</p>
-                        <p><span className="font-medium">Shipping:</span> ₹{(selectedOrder.shippingCharge || 0).toFixed(2)}</p>
-                        <p><span className="font-medium">Subtotal (with discount, tax, shipping):</span> ₹{(selectedOrder.priceWithDiscountTaxShipping).toFixed(2)}</p>
-                        <p><span className="font-medium">Total:</span> ₹{(selectedOrder.totalAmount).toFixed(2)}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-xs sm:text-sm">Status:</span>
-                      {getStatusBadge(selectedOrder.status)}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-xs sm:text-sm">Payment:</span>
-                      {getPaymentStatusBadge(selectedOrder.paymentStatus)}
-                    </div>
-                    <div className="text-xs sm:text-sm text-muted-foreground">
-                      Order placed: {formatDate(selectedOrder.createdAt)}
-                    </div>
-                    {selectedOrder.deliveryDate && (
-                      <div className="text-xs sm:text-sm text-muted-foreground">
-                        Delivered: {formatDate(selectedOrder.deliveryDate)}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-x-2">
-                    <Select 
-                      value={selectedOrder.status} 
-                      onValueChange={(value) => handleStatusUpdate(selectedOrder.id, value as Order['status'])}
-                      disabled={!isAdmin}
-                    >
-                      <SelectTrigger className="w-full sm:w-48 text-xs sm:text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.slice(1).map(option => (
-                          <SelectItem key={option.value} value={option.value} className="text-xs sm:text-sm">
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
 
         {filteredOrders.length === 0 && (
           <Card>

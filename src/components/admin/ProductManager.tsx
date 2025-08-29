@@ -54,7 +54,7 @@ export const ProductManager = () => {
     description: '',
     price: '',
     discountedPrice: '',
-    taxRate: '', // Added taxRate to formData
+    taxRate: '',
     categoryId: '',
     subcategoryId: '',
     stock: '',
@@ -107,7 +107,7 @@ export const ProductManager = () => {
         description: formData.description,
         price: parseFloat(formData.price),
         discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice) : undefined,
-        taxRate: formData.taxRate ? parseFloat(formData.taxRate) : 0, // Added taxRate
+        taxRate: formData.taxRate ? parseFloat(formData.taxRate) : 0,
         categoryId: formData.categoryId,
         subcategoryId: formData.subcategoryId === 'none' ? undefined : formData.subcategoryId,
         stock: parseInt(formData.stock) || 0,
@@ -133,7 +133,7 @@ export const ProductManager = () => {
       description: product.description,
       price: product.price.toString(),
       discountedPrice: product.discountedPrice?.toString() || '',
-      taxRate: product.taxRate?.toString() || '', // Added taxRate
+      taxRate: product.taxRate?.toString() || '',
       categoryId: product.categoryId,
       subcategoryId: product.subcategoryId || 'none',
       stock: product.stock.toString(),
@@ -160,7 +160,7 @@ export const ProductManager = () => {
         description: formData.description,
         price: parseFloat(formData.price),
         discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice) : undefined,
-        taxRate: formData.taxRate ? parseFloat(formData.taxRate) : 0, // Added taxRate
+        taxRate: formData.taxRate ? parseFloat(formData.taxRate) : 0,
         categoryId: formData.categoryId,
         subcategoryId: formData.subcategoryId === 'none' ? undefined : formData.subcategoryId,
         stock: parseInt(formData.stock) || 0,
@@ -198,7 +198,7 @@ export const ProductManager = () => {
       description: '',
       price: '',
       discountedPrice: '',
-      taxRate: '', // Added taxRate
+      taxRate: '',
       categoryId: '',
       subcategoryId: '',
       stock: '',
@@ -238,7 +238,7 @@ export const ProductManager = () => {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl bg-white p-6 rounded-lg shadow-lg">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white p-6 rounded-lg shadow-lg">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
               <DialogDescription>Fill in the product details below</DialogDescription>
@@ -588,7 +588,7 @@ export const ProductManager = () => {
           if (!open) resetForm();
         }}
       >
-        <DialogContent className="max-w-2xl bg-white p-6 rounded-lg shadow-lg">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white p-6 rounded-lg shadow-lg">
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
             <DialogDescription>Update the product details below</DialogDescription>

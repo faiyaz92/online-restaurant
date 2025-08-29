@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,12 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@/components/ui/accordion';
+import { 
   Plus, 
   Search, 
   MoreVertical, 
@@ -36,7 +42,7 @@ import { useFirebaseSubcategories, Subcategory } from '@/hooks/useFirebaseSubcat
 
 export const CategoryManager = () => {
   console.log('CategoryManager rendered');
-  const companyId = 'shopping_cart'; // Ensure this matches your Firebase setup
+  const companyId = 'shopping_cart';
   const { categories, loading, addCategory, updateCategory, deleteCategory } = useFirebaseCategories();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,7 +60,18 @@ export const CategoryManager = () => {
     category.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddCategory = async () => {
+  const resetForm = useCallback(() => {
+    console.log('Resetting form');
+    setFormData({
+      name: '',
+      description: '',
+      image: '',
+      status: 'active'
+    });
+    setEditingCategory(null);
+  }, []);
+
+  const handleAddCategory = useCallback(async () => {
     if (!formData.name) {
       toast.error('Please enter a category name');
       return;
@@ -79,9 +96,9 @@ export const CategoryManager = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData, addCategory, resetForm]);
 
-  const handleEditCategory = (category: Category) => {
+  const handleEditCategory = useCallback((category: Category) => {
     console.log('Editing category:', category);
     setEditingCategory(category);
     setFormData({
@@ -90,10 +107,12 @@ export const CategoryManager = () => {
       image: category.image || '',
       status: category.status
     });
-    setIsAddDialogOpen(true);
-  };
+    setTimeout(() => {
+      setIsAddDialogOpen(true);
+    }, 0);
+  }, []);
 
-  const handleUpdateCategory = async () => {
+  const handleUpdateCategory = useCallback(async () => {
     if (!editingCategory || !formData.name) {
       toast.error('Please enter a category name');
       return;
@@ -110,7 +129,6 @@ export const CategoryManager = () => {
       });
       console.log('Category updated successfully');
       setIsAddDialogOpen(false);
-      setEditingCategory(null);
       resetForm();
       toast.success('Category updated successfully');
     } catch (error: any) {
@@ -119,9 +137,9 @@ export const CategoryManager = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [editingCategory, formData, updateCategory, resetForm]);
 
-  const handleDeleteCategory = async (categoryId: string) => {
+  const handleDeleteCategory = useCallback(async (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId);
     if (category && category.productCount && category.productCount > 0) {
       toast.error('Cannot delete category with existing products');
@@ -137,18 +155,17 @@ export const CategoryManager = () => {
       console.error('Error deleting category:', error);
       toast.error(`Failed to delete category: ${error.message}`);
     }
-  };
+  }, [categories, deleteCategory]);
 
-  const resetForm = () => {
-    console.log('Resetting form');
-    setFormData({
-      name: '',
-      description: '',
-      image: '',
-      status: 'active'
-    });
-    setEditingCategory(null);
-  };
+  const handleDialogOpenChange = useCallback((open: boolean) => {
+    console.log('Dialog open state changed:', open);
+    setIsAddDialogOpen(open);
+    if (!open) {
+      resetForm();
+      document.body.focus();
+      document.body.style.pointerEvents = 'auto';
+    }
+  }, [resetForm]);
 
   return (
     <div className="space-y-6">
@@ -160,11 +177,7 @@ export const CategoryManager = () => {
           </p>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          console.log('Dialog open state changed:', open);
-          setIsAddDialogOpen(open);
-          if (!open) resetForm();
-        }}>
+        <Dialog open={isAddDialogOpen} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button onClick={() => {
               console.log('Add Category button clicked');
@@ -175,7 +188,7 @@ export const CategoryManager = () => {
               Add Category
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg bg-white p-6 rounded-lg shadow-lg z-[1000]">
+          <DialogContent className="max-w-lg bg-white p-6 rounded-lg shadow-lg z-[1000]" onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>
                 {editingCategory ? 'Edit Category' : 'Add New Category'}
@@ -240,13 +253,6 @@ export const CategoryManager = () => {
               </div>
             </div>
 
-            {editingCategory && (
-              <div className="mt-6">
-                <h3 className="font-semibold mb-4">Subcategories</h3>
-                <SubcategoriesSection categoryId={editingCategory.id} />
-              </div>
-            )}
-
             <DialogFooter className="flex justify-end space-x-2">
               <Button
                 variant="outline"
@@ -303,20 +309,38 @@ export const CategoryManager = () => {
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <Accordion type="multiple" className="w-full">
             {filteredCategories.map((category) => (
-              <Card key={category.id} className="group hover:shadow-elevation transition-shadow">
-                <CardContent className="p-0">
-                  <div className="relative">
-                    <img
-                      src={category.image || '/placeholder.svg'}
-                      alt={category.name}
-                      className="w-full h-32 object-cover rounded-t-lg"
-                    />
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <AccordionItem value={category.id} key={category.id}>
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex w-full items-center justify-between pr-4">
+                    <div className="flex items-center space-x-4">
+                      <img
+                        src={category.image || '/placeholder.svg'}
+                        alt={category.name}
+                        className="w-10 h-10 object-cover rounded"
+                      />
+                      <div>
+                        <h3 className="font-semibold">{category.name}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {category.description || 'No description provided'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <Badge variant="secondary">
+                        {category.productCount || 0} products
+                      </Badge>
+                      <Badge variant={category.status === 'active' ? 'default' : 'destructive'}>
+                        {category.status}
+                      </Badge>
+                      <Button variant="ghost" size="sm">
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        View Products
+                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="secondary" size="sm" className="border border-gray-300 p-2 rounded">
+                          <Button variant="ghost" size="sm">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -337,34 +361,13 @@ export const CategoryManager = () => {
                       </DropdownMenu>
                     </div>
                   </div>
-                  
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{category.name}</h3>
-                      <Badge variant="secondary">
-                        {category.productCount || 0} products
-                      </Badge>
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {category.description || 'No description provided'}
-                    </p>
-                    
-                    <div className="flex items-center justify-between pt-2">
-                      <Badge variant={category.status === 'active' ? 'default' : 'destructive'}>
-                        {category.status}
-                      </Badge>
-                      
-                      <Button variant="ghost" size="sm">
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        View Products
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <SubcategoriesSection categoryId={category.id} />
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </>
       )}
     </div>
@@ -383,7 +386,7 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
     status: 'active' as 'active' | 'inactive'
   });
 
-  const resetSubForm = () => {
+  const resetSubForm = useCallback(() => {
     console.log('Resetting subcategory form');
     setSubFormData({
       name: '',
@@ -392,9 +395,9 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
       status: 'active'
     });
     setEditingSub(null);
-  };
+  }, []);
 
-  const handleAddSub = async () => {
+  const handleAddSub = useCallback(async () => {
     if (!subFormData.name) {
       toast.error('Please enter a subcategory name');
       return;
@@ -420,9 +423,9 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
     } finally {
       setIsSubLoading(false);
     }
-  };
+  }, [subFormData, addSubcategory, resetSubForm, categoryId]);
 
-  const handleUpdateSub = async () => {
+  const handleUpdateSub = useCallback(async () => {
     if (!editingSub || !subFormData.name) {
       toast.error('Please enter a subcategory name');
       return;
@@ -447,9 +450,9 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
     } finally {
       setIsSubLoading(false);
     }
-  };
+  }, [editingSub, subFormData, updateSubcategory, resetSubForm]);
 
-  const handleDeleteSub = async (id: string) => {
+  const handleDeleteSub = useCallback(async (id: string) => {
     try {
       console.log('Attempting to delete subcategory:', id);
       await deleteSubcategory(id);
@@ -459,9 +462,9 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
       console.error('Error deleting subcategory:', error);
       toast.error(`Failed to delete subcategory: ${error.message}`);
     }
-  };
+  }, [deleteSubcategory]);
 
-  const handleEditSub = (sub: Subcategory) => {
+  const handleEditSub = useCallback((sub: Subcategory) => {
     console.log('Editing subcategory:', sub);
     setEditingSub(sub);
     setSubFormData({
@@ -471,7 +474,17 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
       status: sub.status
     });
     setIsSubDialogOpen(true);
-  };
+  }, []);
+
+  const handleSubDialogOpenChange = useCallback((open: boolean) => {
+    console.log('Subcategory dialog open state changed:', open);
+    setIsSubDialogOpen(open);
+    if (!open) {
+      resetSubForm();
+      document.body.focus();
+      document.body.style.pointerEvents = 'auto';
+    }
+  }, [resetSubForm]);
 
   if (loading) {
     return (
@@ -482,13 +495,10 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Dialog open={isSubDialogOpen} onOpenChange={(open) => {
-          console.log('Subcategory dialog open state changed:', open);
-          setIsSubDialogOpen(open);
-          if (!open) resetSubForm();
-        }}>
+    <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+      <div className="flex justify-between items-center">
+        <h3 className="font-semibold">Subcategories</h3>
+        <Dialog open={isSubDialogOpen} onOpenChange={handleSubDialogOpenChange}>
           <DialogTrigger asChild>
             <Button
               variant="outline"
@@ -501,7 +511,7 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
               <Plus className="h-4 w-4 mr-2" /> Add Subcategory
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg bg-white p-6 rounded-lg shadow-lg z-[1000]">
+          <DialogContent className="max-w-lg bg-white p-6 rounded-lg shadow-lg z-[1000]" onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>{editingSub ? 'Edit Subcategory' : 'Add New Subcategory'}</DialogTitle>
               <DialogDescription>

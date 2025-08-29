@@ -5,6 +5,7 @@ import { Dashboard } from '@/components/admin/Dashboard';
 import { ProductManager } from '@/components/admin/ProductManager';
 import { CategoryManager } from '@/components/admin/CategoryManager';
 import { OrderManager } from '@/components/admin/OrderManager';
+import { OrderDetails } from '@/components/admin/OrderDetails';
 import { SettingsPage } from '@/components/admin/SettingsManager';
 import { InquiriesPage } from '@/components/admin/InquiresPage';
 import AdminUserList from '@/components/admin/AdminUserList';
@@ -24,6 +25,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onLogout })
         <Route path="/products" element={<ProductManager />} />
         <Route path="/categories" element={<CategoryManager />} />
         <Route path="/orders" element={<OrderManager />} />
+        <Route path="/order-details/:orderId" element={<OrderDetails />} />
         <Route path="/users" element={<AdminUserList />} />
         <Route path="/analytics" element={<div>Analytics</div>} />
         <Route path="/promotions" element={<div>Promotions Management</div>} />

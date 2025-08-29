@@ -222,6 +222,9 @@ const AdminUserList: React.FC = () => {
     }
   };
 
+  const rowClass = "block sm:table-row mb-4 sm:mb-0 border border-border rounded-md shadow-sm sm:shadow-none sm:rounded-none sm:border-none";
+  const cellClass = "block sm:table-cell text-right sm:text-left before:float-left before:font-bold before:text-muted-foreground sm:before:content-none before:content-[attr(data-label)_':']";
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
       <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 flex-grow space-y-6">
@@ -248,8 +251,8 @@ const AdminUserList: React.FC = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
+                <Table className="w-full">
+                  <TableHeader className="hidden sm:table-header-group">
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
@@ -262,19 +265,19 @@ const AdminUserList: React.FC = () => {
                   </TableHeader>
                   <TableBody>
                     {filtered.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center">No users found</TableCell>
+                      <TableRow className={rowClass}>
+                        <TableCell className={`${cellClass} text-center sm:text-center`} colSpan={7} data-label="">No users found</TableCell>
                       </TableRow>
                     ) : (
                       filtered.map(user => (
-                        <TableRow key={user.id}>
-                          <TableCell>{user.name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>{user.userType || '-'}</TableCell>
-                          <TableCell>{user.role || '-'}</TableCell>
-                          <TableCell>{user.mobileNumber || '-'}</TableCell>
-                          <TableCell>{user.address || '-'}</TableCell>
-                          <TableCell>
+                        <TableRow key={user.id} className={rowClass}>
+                          <TableCell className={cellClass} data-label="Name">{user.name}</TableCell>
+                          <TableCell className={cellClass} data-label="Email">{user.email}</TableCell>
+                          <TableCell className={cellClass} data-label="User Type">{user.userType || '-'}</TableCell>
+                          <TableCell className={cellClass} data-label="Role">{user.role || '-'}</TableCell>
+                          <TableCell className={cellClass} data-label="Mobile">{user.mobileNumber || '-'}</TableCell>
+                          <TableCell className={cellClass} data-label="Address">{user.address || '-'}</TableCell>
+                          <TableCell className={cellClass} data-label="Actions">
                             <Button variant="outline" size="sm" onClick={() => openEditDialog(user)} className="mr-2">
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -367,5 +370,3 @@ const AdminUserList: React.FC = () => {
 };
 
 export default AdminUserList;
-
-
