@@ -103,21 +103,6 @@ export const OrderManager: React.FC = () => {
     );
   };
 
-  const getPaymentStatusBadge = (status: Order['paymentStatus']) => {
-    const variants = {
-      pending: 'destructive' as const,
-      paid: 'default' as const,
-      failed: 'destructive' as const,
-      refunded: 'secondary' as const,
-    };
-    
-    return (
-      <Badge variant={variants[status]} className="text-xs">
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
   const handleStatusUpdate = (orderId: string, newStatus: Order['status']) => {
     if (!isAdmin) {
       toast.error('You do not have permission to update order status');
@@ -234,13 +219,10 @@ export const OrderManager: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs sm:text-sm">Order</TableHead>
-                    <TableHead className="text-xs sm:text-sm">Customer</TableHead>
+                    <TableHead className="text-xs sm:text-sm w-[150px]">Customer</TableHead>
                     <TableHead className="text-xs sm:text-sm">Items</TableHead>
                     <TableHead className="text-xs sm:text-sm">Total</TableHead>
-                    <TableHead className="text-xs sm:text-sm">Tax</TableHead>
-                    <TableHead className="text-xs sm:text-sm">Shipping</TableHead>
                     <TableHead className="text-xs sm:text-sm">Status</TableHead>
-                    <TableHead className="text-xs sm:text-sm">Payment</TableHead>
                     <TableHead className="text-xs sm:text-sm">Date</TableHead>
                     <TableHead className="text-xs sm:text-sm text-right">Actions</TableHead>
                   </TableRow>
@@ -251,10 +233,14 @@ export const OrderManager: React.FC = () => {
                       <TableCell className="font-medium text-xs sm:text-sm">
                         {order.orderNumber || 'N/A'}
                       </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium text-xs sm:text-sm">{order.customer.name || 'N/A'}</div>
-                          <div className="text-xs text-muted-foreground">{order.customer.email || 'N/A'}</div>
+                      <TableCell className="w-[150px]">
+                        <div className="flex flex-col">
+                          <div className="font-medium text-xs sm:text-sm truncate">
+                            {order.customer.name || 'N/A'}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[150px]" title={order.customer.email || 'N/A'}>
+                            {order.customer.email || 'N/A'}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -274,17 +260,8 @@ export const OrderManager: React.FC = () => {
                       <TableCell className="font-medium text-xs sm:text-sm">
                         ₹{order.totalAmount.toFixed(2)}
                       </TableCell>
-                      <TableCell className="font-medium text-xs sm:text-sm">
-                        ₹{(order.totalTax || 0).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="font-medium text-xs sm:text-sm">
-                        ₹{(order.shippingCharge || 0).toFixed(2)}
-                      </TableCell>
                       <TableCell>
                         {getStatusBadge(order.status)}
-                      </TableCell>
-                      <TableCell>
-                        {getPaymentStatusBadge(order.paymentStatus)}
                       </TableCell>
                       <TableCell className="text-xs sm:text-sm">
                         {formatDate(order.createdAt)}
@@ -354,8 +331,17 @@ export const OrderManager: React.FC = () => {
                         <span className="font-medium">Order #{order.orderNumber || 'N/A'}</span>
                         {getStatusBadge(order.status)}
                       </div>
-                      <p><span className="font-medium">Customer:</span> {order.customer.name || 'N/A'}</p>
-                      <p><span className="font-medium">Email:</span> {order.customer.email || 'N/A'}</p>
+                      <p>
+                        <span className="font-medium">Customer:</span>{' '}
+                        <span className="truncate max-w-[200px] inline-block" title={order.customer.name || 'N/A'}>
+                          {order.customer.name || 'N/A'}
+                        </span>
+                        {order.customer.email && (
+                          <span className="text-muted-foreground truncate max-w-[200px] block" title={order.customer.email}>
+                            {order.customer.email}
+                          </span>
+                        )}
+                      </p>
                       <p><span className="font-medium">Items:</span></p>
                       {order.items.slice(0, 2).map((item, index) => (
                         <p key={index} className="pl-2">{item.quantity}x {item.name}</p>
@@ -364,9 +350,6 @@ export const OrderManager: React.FC = () => {
                         <p className="pl-2 text-muted-foreground">+{order.items.length - 2} more</p>
                       )}
                       <p><span className="font-medium">Total:</span> ₹{order.totalAmount.toFixed(2)}</p>
-                      <p><span className="font-medium">Tax:</span> ₹{(order.totalTax || 0).toFixed(2)}</p>
-                      <p><span className="font-medium">Shipping:</span> ₹{(order.shippingCharge || 0).toFixed(2)}</p>
-                      <p><span className="font-medium">Payment:</span> {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}</p>
                       <p><span className="font-medium">Date:</span> {formatDate(order.createdAt)}</p>
                       <div className="flex justify-end">
                         <DropdownMenu>

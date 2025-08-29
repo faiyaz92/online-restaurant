@@ -9,6 +9,7 @@ import { OrderDetails } from '@/components/admin/OrderDetails';
 import { SettingsPage } from '@/components/admin/SettingsManager';
 import { InquiriesPage } from '@/components/admin/InquiresPage';
 import AdminUserList from '@/components/admin/AdminUserList';
+import { Analytics } from '@/components/admin/AdminAnalytics';
 // import UserListPage from '@/components/admin/UserListPage';
 // import { UserManager } from '@/components/admin/UsersManagment';
 
@@ -27,7 +28,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToStore, onLogout })
         <Route path="/orders" element={<OrderManager />} />
         <Route path="/order-details/:orderId" element={<OrderDetails />} />
         <Route path="/users" element={<AdminUserList />} />
-        <Route path="/analytics" element={<div>Analytics</div>} />
+        <Route path="/analytics" element={<Analytics />} />
         <Route path="/promotions" element={<div>Promotions Management</div>} />
         <Route path="/inquiries" element={<InquiriesPage />} />
         <Route path="/settings" element={<SettingsPage />} />

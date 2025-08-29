@@ -35,7 +35,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
         <div className="flex-1 flex flex-col">
           <header className="h-16 flex items-center justify-between px-6 border-b bg-background">
             <div className="flex items-center gap-4">
-              <SidebarTrigger />
+              {/* Show SidebarTrigger only on mobile (sm breakpoint and below) */}
+              <div className="sm:hidden">
+                <SidebarTrigger />
+              </div>
               <h1 className="text-xl font-semibold">Admin Panel</h1>
             </div>
             

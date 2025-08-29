@@ -139,11 +139,13 @@ export const ProductManager = () => {
       stock: product.stock.toString(),
       images: product.images,
     });
-    setIsEditDialogOpen(true);
     if (product.categoryId) {
       console.log('Pre-fetching subcategories for edit product, category:', product.categoryId);
       fetchSubcategories(product.categoryId);
     }
+    setTimeout(() => {
+      setIsEditDialogOpen(true);
+    }, 0);
   };
 
   const handleUpdateProduct = async () => {
@@ -209,6 +211,26 @@ export const ProductManager = () => {
     setSelectedSubcategory('');
   };
 
+  const handleAddDialogOpenChange = (open: boolean) => {
+    console.log('Add Product dialog open state changed:', open);
+    setIsAddDialogOpen(open);
+    if (!open) {
+      resetForm();
+      document.body.focus();
+      document.body.style.pointerEvents = 'auto';
+    }
+  };
+
+  const handleEditDialogOpenChange = (open: boolean) => {
+    console.log('Edit Product dialog open state changed:', open);
+    setIsEditDialogOpen(open);
+    if (!open) {
+      resetForm();
+      document.body.focus();
+      document.body.style.pointerEvents = 'auto';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -218,11 +240,7 @@ export const ProductManager = () => {
         </div>
         <Dialog
           open={isAddDialogOpen}
-          onOpenChange={(open) => {
-            console.log('Add Product dialog open state changed:', open);
-            setIsAddDialogOpen(open);
-            if (!open) resetForm();
-          }}
+          onOpenChange={handleAddDialogOpenChange}
         >
           <DialogTrigger asChild>
             <Button
@@ -238,7 +256,7 @@ export const ProductManager = () => {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white p-6 rounded-lg shadow-lg">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white p-6 rounded-lg shadow-lg shadow-elevation" onInteractOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
               <DialogDescription>Fill in the product details below</DialogDescription>
@@ -582,13 +600,9 @@ export const ProductManager = () => {
 
       <Dialog
         open={isEditDialogOpen}
-        onOpenChange={(open) => {
-          console.log('Edit Product dialog open state changed:', open);
-          setIsEditDialogOpen(open);
-          if (!open) resetForm();
-        }}
+        onOpenChange={handleEditDialogOpenChange}
       >
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white p-6 rounded-lg shadow-lg">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white p-6 rounded-lg shadow-lg shadow-elevation" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
             <DialogDescription>Update the product details below</DialogDescription>
