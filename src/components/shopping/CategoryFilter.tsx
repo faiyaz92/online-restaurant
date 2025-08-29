@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { Category } from '@/types/product';
 import { useFirebaseSubcategories } from '@/hooks/useFirebaseSubcategories';
@@ -59,10 +59,23 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
   );
 
   const handleCategoryClick = (categoryId: string) => {
-    const newSelected = selectedCategories.includes(categoryId)
-      ? selectedCategories.filter((id) => id !== categoryId)
-      : [...selectedCategories.filter((id) => id !== 'all'), categoryId];
-    onCategoryChange(newSelected.length === 0 ? ['all'] : newSelected);
+    let newSelectedCategories: string[];
+    let newSelectedSubcategories: string[] = [...selectedSubcategories];
+
+    if (selectedCategories.includes(categoryId)) {
+      // Deselect category and its subcategories
+      newSelectedCategories = selectedCategories.filter((id) => id !== categoryId && id !== 'all');
+      const subcategoriesToRemove = subcategoryMap[categoryId]?.subcategories.map((sub) => sub.id) || [];
+      newSelectedSubcategories = newSelectedSubcategories.filter((id) => !subcategoriesToRemove.includes(id));
+    } else {
+      // Select category and all its subcategories
+      newSelectedCategories = [...selectedCategories.filter((id) => id !== 'all'), categoryId];
+      const subcategoriesToAdd = subcategoryMap[categoryId]?.subcategories.map((sub) => sub.id) || [];
+      newSelectedSubcategories = [...new Set([...newSelectedSubcategories, ...subcategoriesToAdd])];
+    }
+
+    onCategoryChange(newSelectedCategories.length === 0 ? ['all'] : newSelectedCategories);
+    onSubcategoryChange(newSelectedSubcategories);
   };
 
   const handleSubcategoryClick = (subcategoryId: string) => {
@@ -70,6 +83,22 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
       ? selectedSubcategories.filter((id) => id !== subcategoryId)
       : [...selectedSubcategories, subcategoryId];
     onSubcategoryChange(newSelected);
+
+    // If no subcategories are selected for a category, deselect the category
+    const foundCategory = categories.find(cat =>
+      subcategoryMap[cat.categoryId]?.subcategories.some(sub => sub.id === subcategoryId)
+    );
+    const categoryId = foundCategory?.categoryId;
+    
+    if (categoryId) {
+      const subcategoriesForCategory = subcategoryMap[categoryId]?.subcategories.map(sub => sub.id) || [];
+      const hasSelectedSubcategories = subcategoriesForCategory.some(id => newSelected.includes(id));
+      
+      if (!hasSelectedSubcategories && selectedCategories.includes(categoryId)) {
+        const newSelectedCategories = selectedCategories.filter(id => id !== categoryId && id !== 'all');
+        onCategoryChange(newSelectedCategories.length === 0 ? ['all'] : newSelectedCategories);
+      }
+    }
   };
 
   const handleToggleCategory = (categoryId: string) => {
@@ -104,31 +133,34 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
 
       {/* Header and Clear Filters */}
       <div className="flex justify-between items-center px-3 py-2 border-b border-muted">
-        <h3 className="text-lg font-semibold text-foreground">Categories</h3>
+        <h3 className="text-lg font-semibold text-foreground">Filters</h3>
         <Button
           variant="outline"
           size="sm"
           onClick={handleClearFilters}
           className="text-xs h-7 px-2 border-muted text-foreground hover:bg-muted"
         >
-          Clear
+          Clear All
         </Button>
       </div>
 
-      {/* Scrollable Category List */}
+      {/* Scrollable Filter List */}
       <ScrollArea className="flex-1">
-        <div className="space-y-2 px-3 py-3">
-          <Button
-            variant={selectedCategories.includes('all') ? 'default' : 'ghost'}
-            size="sm"
-            className="w-full justify-between text-sm h-8 rounded-md"
-            onClick={() => onCategoryChange(['all'])}
-          >
-            <span>All Products</span>
-            <Badge variant="secondary" className="text-xs">
-              {products.length}
-            </Badge>
-          </Button>
+        <div className="space-y-3 px-3 py-3">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="all-products"
+              checked={selectedCategories.includes('all')}
+              onCheckedChange={() => onCategoryChange(['all'])}
+            />
+            <label
+              htmlFor="all-products"
+              className="text-sm font-medium text-foreground flex items-center justify-between w-full"
+            >
+              <span>All Products</span>
+              <span className="text-xs text-muted-foreground">({products.length})</span>
+            </label>
+          </div>
 
           {filteredCategories.map((category) => {
             const productCount = products.filter(
@@ -145,29 +177,30 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
             const isExpanded = expandedCategories.includes(category.categoryId);
 
             return (
-              <div key={category.categoryId} className="space-y-1">
-                <Button
-                  variant={selectedCategories.includes(category.categoryId) ? 'default' : 'ghost'}
-                  size="sm"
-                  className="w-full justify-between text-sm h-8 rounded-md"
-                  onClick={() => {
-                    handleCategoryClick(category.categoryId);
-                    handleToggleCategory(category.categoryId);
-                  }}
-                >
-                  <span>{category.name}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {productCount}
-                    </Badge>
-                    {filteredSubcategories.length > 0 && (
-                      isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </Button>
+              <div key={category.categoryId} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={`category-${category.categoryId}`}
+                    checked={selectedCategories.includes(category.categoryId)}
+                    onCheckedChange={() => handleCategoryClick(category.categoryId)}
+                  />
+                  <label
+                    htmlFor={`category-${category.categoryId}`}
+                    className="text-sm font-medium text-foreground flex items-center justify-between w-full cursor-pointer"
+                    onClick={() => handleToggleCategory(category.categoryId)}
+                  >
+                    <span>{category.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">({productCount})</span>
+                      {filteredSubcategories.length > 0 && (
+                        isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </label>
+                </div>
 
                 {isExpanded && (
-                  <div className="ml-3 space-y-1">
+                  <div className="ml-6 space-y-2">
                     {subcategoryData.error && (
                       <p className="text-xs text-red-600">{subcategoryData.error}</p>
                     )}
@@ -179,18 +212,22 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
                       <p className="text-xs text-muted-foreground">No subcategories</p>
                     ) : (
                       filteredSubcategories.map((subcategory) => (
-                        <Button
-                          key={subcategory.id}
-                          variant={selectedSubcategories.includes(subcategory.id) ? 'default' : 'ghost'}
-                          size="sm"
-                          className="w-full justify-between text-xs h-7 rounded-md"
-                          onClick={() => handleSubcategoryClick(subcategory.id)}
-                        >
-                          <span>{subcategory.name}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {products.filter((p) => p.subcategoryId === subcategory.id).length}
-                          </Badge>
-                        </Button>
+                        <div key={subcategory.id} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`subcategory-${subcategory.id}`}
+                            checked={selectedSubcategories.includes(subcategory.id)}
+                            onCheckedChange={() => handleSubcategoryClick(subcategory.id)}
+                          />
+                          <label
+                            htmlFor={`subcategory-${subcategory.id}`}
+                            className="text-xs text-foreground flex items-center justify-between w-full"
+                          >
+                            <span>{subcategory.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({products.filter((p) => p.subcategoryId === subcategory.id).length})
+                            </span>
+                          </label>
+                        </div>
                       ))
                     )}
                   </div>

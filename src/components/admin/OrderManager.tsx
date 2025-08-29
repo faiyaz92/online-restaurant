@@ -136,9 +136,13 @@ export const OrderManager: React.FC = () => {
   };
 
   const handleViewOrder = (order: Order) => {
-    console.log('Viewing order:', order);
     setSelectedOrder(order);
     setIsDetailDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDetailDialogOpen(false);
+    setSelectedOrder(null); // Clear selected order to prevent stale state
   };
 
   const formatDate = (dateString: string) => {
@@ -437,8 +441,8 @@ export const OrderManager: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-          <DialogContent className="max-w-3xl sm:max-w-4xl">
+        <Dialog open={isDetailDialogOpen} onOpenChange={handleCloseDialog}>
+          <DialogContent className="max-w-3xl sm:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl">
                 Order Details - {selectedOrder?.orderNumber || 'N/A'}

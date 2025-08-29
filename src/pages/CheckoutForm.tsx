@@ -16,7 +16,7 @@ import { useFirestorePaths } from '@/hooks/useFirestorePaths';
 import { useUserInfo } from '@/hooks/useUserInfo';
 import { toast } from 'sonner';
 import { MapPin, CreditCard, Loader2, Plus } from 'lucide-react';
-import { Header } from '@/components/shopping/Header'; // Added Header import
+import { Header } from '@/components/shopping/Header';
 import { Footer } from '@/components/shopping/Footer';
 import { Address, OrderItem as OrderItemType } from '@/types/product';
 
@@ -43,7 +43,7 @@ interface CheckoutFormProps {
 }
 
 export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
-  const { currentUser, logout } = useAuth(); // Added logout for Header
+  const { currentUser, logout } = useAuth();
   const userInfo = useUserInfo();
   const { items, clearCart, getTotalPrice, getTotalTax } = useCartStore();
   const { products, loading: productsLoading } = useFirebaseProducts();
@@ -63,29 +63,34 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
     state: '',
     zipCode: '',
     country: 'India',
-    isDefault: true,
+    isDefault: addresses.length === 0,
   });
 
   const priceWithDiscount = productsLoading ? 0 : getTotalPrice(products);
   const totalTax = productsLoading ? 0 : getTotalTax(products);
-  const shipping = settingsLoading ? 0 : settings?.shippingCharge || 0;
-  const priceWithoutDiscount = productsLoading ? 0 : items.reduce((total, item) => {
-    const product = products.find((p) => p.productId === item.productId);
-    const price = Number(product?.price || item.price) || 0;
-    return total + price * item.quantity;
-  }, 0);
+  const shipping = settingsLoading ? 0 : settings?.shippingCharge ?? 0;
+  const priceWithoutDiscount = productsLoading
+    ? 0
+    : items.reduce((total, item) => {
+        const product = products.find((p) => p.productId === item.productId);
+        const price = Number(product?.price ?? item.price ?? 0);
+        return total + price * item.quantity;
+      }, 0);
   const priceWithDiscountTaxShipping = priceWithDiscount + totalTax + shipping;
   const finalTotal = priceWithDiscountTaxShipping;
 
   useEffect(() => {
-    if (!addressesLoading && addresses.length > 0 && !selectedAddressId) {
-      const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0];
-      setSelectedAddressId(defaultAddress?.addressId || null);
-      setShowNewAddressForm(false);
+    if (!addressesLoading && addresses.length > 0) {
+      // Only set selectedAddressId if not already set and form is not open
+      if (!selectedAddressId && !showNewAddressForm) {
+        const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0];
+        setSelectedAddressId(defaultAddress?.addressId ?? null);
+      }
     } else if (!addressesLoading && addresses.length === 0) {
       setShowNewAddressForm(true);
+      setSelectedAddressId(null);
     }
-  }, [addresses, addressesLoading, selectedAddressId]);
+  }, [addresses, addressesLoading, showNewAddressForm, selectedAddressId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,38 +133,44 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         return;
       }
 
-      const email = newAddress.email && typeof newAddress.email === 'string' && newAddress.email.trim() !== '' ? newAddress.email.trim() : null;
+      const email = newAddress.email && newAddress.email.trim() !== '' ? newAddress.email.trim() : null;
 
       try {
-        console.log('Calling addAddress with:', { ...newAddress, email });
-        const newAddressDoc = await addAddress({ ...newAddress, email } as Address);
-        console.log('New address document:', newAddressDoc, 'ID:', newAddressDoc.id);
-        finalAddressId = newAddressDoc.id;
-        shippingAddress = {
-          ...newAddress,
+        const addressToAdd: Address = {
+          fullName: newAddress.fullName,
+          phoneNumber: newAddress.phoneNumber,
+          address: newAddress.address,
+          city: newAddress.city,
+          state: newAddress.state,
+          zipCode: newAddress.zipCode,
+          country: newAddress.country,
           email,
-          addressId: newAddressDoc.id,
           userId: currentUser.uid,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           companyId: 'shopping_cart',
-          isDefault: true,
-        } as Address;
+          isDefault: addresses.length === 0 || newAddress.isDefault || false,
+          addressId: '',
+        };
+        const newAddressDoc = await addAddress(addressToAdd);
+        finalAddressId = newAddressDoc.id;
+        shippingAddress = { ...addressToAdd, addressId: newAddressDoc.id };
         await setDefaultAddress(newAddressDoc.id);
+        setShowNewAddressForm(false); // Close form after adding new address
       } catch (err: unknown) {
         console.error('Failed to add new address:', err);
         toast.error(`Failed to add new address: ${err instanceof Error ? err.message : 'Unknown error'}`);
         return;
       }
     } else {
-      shippingAddress = addresses.find((addr) => addr.addressId === selectedAddressId)!;
+      shippingAddress = addresses.find((addr) => addr.addressId === selectedAddressId);
       if (!shippingAddress) {
         toast.error('Please select a valid address');
         return;
       }
       shippingAddress = {
         ...shippingAddress,
-        email: shippingAddress.email && typeof shippingAddress.email === 'string' && shippingAddress.email.trim() !== '' ? shippingAddress.email.trim() : null,
+        email: shippingAddress.email && shippingAddress.email.trim() !== '' ? shippingAddress.email.trim() : null,
       };
       try {
         await setDefaultAddress(selectedAddressId!);
@@ -177,9 +188,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         companyId: 'shopping_cart',
         items: items.map((item) => {
           const product = products.find((p) => p.productId === item.productId);
-          const price = Number(product?.discountedPrice || product?.price || item.price) || 0;
-          const originalPrice = Number(product?.price || item.price) || 0;
-          const taxRate = product?.taxRate || 0;
+          const price = Number(product?.discountedPrice ?? product?.price ?? item.price ?? 0);
+          const originalPrice = Number(product?.price ?? item.price ?? 0);
+          const taxRate = product?.taxRate ?? 0;
           const taxAmount = price * item.quantity * (taxRate / 100);
           return {
             productId: item.productId,
@@ -233,7 +244,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
           zipCode: orderData.shippingAddress.zipCode,
           country: orderData.shippingAddress.country,
           phoneNumber: orderData.shippingAddress.phoneNumber,
-          email: orderData.shippingAddress.email && typeof orderData.shippingAddress.email === 'string' && orderData.shippingAddress.email.trim() !== '' ? orderData.shippingAddress.email.trim() : null,
+          email: orderData.shippingAddress.email,
           addressId: orderData.shippingAddress.addressId,
           userId: orderData.shippingAddress.userId,
           createdAt: orderData.shippingAddress.createdAt,
@@ -246,14 +257,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
         updatedAt: orderData.updatedAt,
       };
 
-      console.log('Placing order:', sanitizedOrderData);
-
       await addDoc(collection(firestore, paths.getOrdersPath()), sanitizedOrderData);
-      console.log('Order placed successfully, clearing cart');
       clearCart();
       toast.success('Order placed successfully!');
 
-      console.log('Calling onOrderComplete, type:', typeof onOrderComplete);
       if (typeof onOrderComplete === 'function') {
         onOrderComplete();
       } else {
@@ -277,10 +284,16 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
   };
 
   const toggleNewAddressForm = () => {
-    setShowNewAddressForm(!showNewAddressForm);
-    if (!showNewAddressForm) {
-      setSelectedAddressId(null);
-    }
+    setShowNewAddressForm((prev) => {
+      const newState = !prev;
+      if (!newState && addresses.length > 0) {
+        const defaultAddress = addresses.find((addr) => addr.isDefault) || addresses[0];
+        setSelectedAddressId(defaultAddress?.addressId ?? null);
+      } else if (newState) {
+        setSelectedAddressId(null);
+      }
+      return newState;
+    });
   };
 
   const handleLogin = () => {
@@ -342,7 +355,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) =
                           id={addr.addressId}
                           name="address"
                           checked={selectedAddressId === addr.addressId}
-                          onChange={() => setSelectedAddressId(addr.addressId)}
+                          onChange={() => {
+                            setSelectedAddressId(addr.addressId);
+                            setShowNewAddressForm(false);
+                          }}
                           className="h-4 w-4"
                         />
                         <label htmlFor={addr.addressId} className="flex-1 cursor-pointer">
