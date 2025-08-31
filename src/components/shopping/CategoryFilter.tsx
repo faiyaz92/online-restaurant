@@ -68,14 +68,21 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
       const subcategoriesToRemove = subcategoryMap[categoryId]?.subcategories.map((sub) => sub.id) || [];
       newSelectedSubcategories = newSelectedSubcategories.filter((id) => !subcategoriesToRemove.includes(id));
     } else {
-      // Select category and all its subcategories
+      // Select category (do not automatically select subcategories to include products without subcategories)
       newSelectedCategories = [...selectedCategories.filter((id) => id !== 'all'), categoryId];
-      const subcategoriesToAdd = subcategoryMap[categoryId]?.subcategories.map((sub) => sub.id) || [];
-      newSelectedSubcategories = [...new Set([...newSelectedSubcategories, ...subcategoriesToAdd])];
+      // No change to subcategories; keep as is to allow showing all products in category
     }
 
     onCategoryChange(newSelectedCategories.length === 0 ? ['all'] : newSelectedCategories);
     onSubcategoryChange(newSelectedSubcategories);
+
+    // Clean up selected subcategories to only those belonging to selected categories
+    const selectedCats = newSelectedCategories[0] === 'all' ? categories.map(c => c.categoryId) : newSelectedCategories;
+    const validSubIds = selectedCats.flatMap(catId => subcategoryMap[catId]?.subcategories.map(sub => sub.id) || []);
+    const cleanedSubs = newSelectedSubcategories.filter(id => validSubIds.includes(id));
+    if (cleanedSubs.length !== newSelectedSubcategories.length) {
+      onSubcategoryChange(cleanedSubs);
+    }
   };
 
   const handleSubcategoryClick = (subcategoryId: string) => {
@@ -84,19 +91,36 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
       : [...selectedSubcategories, subcategoryId];
     onSubcategoryChange(newSelected);
 
-    // If no subcategories are selected for a category, deselect the category
+    // Find the category for this subcategory
     const foundCategory = categories.find(cat =>
       subcategoryMap[cat.categoryId]?.subcategories.some(sub => sub.id === subcategoryId)
     );
     const categoryId = foundCategory?.categoryId;
-    
+
     if (categoryId) {
+      // If adding the subcategory and category not selected, select the category
+      if (!selectedSubcategories.includes(subcategoryId) && !selectedCategories.includes(categoryId)) {
+        const newSelectedCategories = [...selectedCategories.filter(id => id !== 'all'), categoryId];
+        onCategoryChange(newSelectedCategories);
+      }
+
+      // If no subcategories are selected for this category after change, deselect the category
       const subcategoriesForCategory = subcategoryMap[categoryId]?.subcategories.map(sub => sub.id) || [];
       const hasSelectedSubcategories = subcategoriesForCategory.some(id => newSelected.includes(id));
-      
+
       if (!hasSelectedSubcategories && selectedCategories.includes(categoryId)) {
         const newSelectedCategories = selectedCategories.filter(id => id !== categoryId && id !== 'all');
         onCategoryChange(newSelectedCategories.length === 0 ? ['all'] : newSelectedCategories);
+      }
+
+      // Clean up selected subcategories to only those belonging to selected categories
+      const selectedCats = selectedCategories.includes(categoryId) 
+        ? selectedCategories 
+        : [...selectedCategories.filter(id => id !== 'all'), categoryId]; // Temporary for clean
+      const validSubIds = selectedCats.flatMap(catId => subcategoryMap[catId]?.subcategories.map(sub => sub.id) || []);
+      const cleanedSubs = newSelected.filter(id => validSubIds.includes(id));
+      if (cleanedSubs.length !== newSelected.length) {
+        onSubcategoryChange(cleanedSubs);
       }
     }
   };

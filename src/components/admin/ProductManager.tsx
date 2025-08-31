@@ -88,7 +88,7 @@ export const ProductManager = () => {
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
-    const matchesSubcategory = !selectedSubcategory || product.subcategoryId === selectedSubcategory;
+    const matchesSubcategory = selectedSubcategory === 'none' || !selectedSubcategory || product.subcategoryId === selectedSubcategory;
     return matchesSearch && matchesCategory && matchesSubcategory;
   });
 
@@ -101,7 +101,9 @@ export const ProductManager = () => {
     try {
       setLoading(true);
       console.log('Attempting to add product:', { ...formData, companyId });
-      await addProduct({
+
+      // Conditionally build the product data object
+      const productData: Omit<Product, 'createdAt' | 'companyId'> = {
         productId: Date.now().toString(),
         name: formData.name,
         description: formData.description,
@@ -109,10 +111,16 @@ export const ProductManager = () => {
         discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice) : undefined,
         taxRate: formData.taxRate ? parseFloat(formData.taxRate) : 0,
         categoryId: formData.categoryId,
-        subcategoryId: formData.subcategoryId === 'none' ? undefined : formData.subcategoryId,
         stock: parseInt(formData.stock) || 0,
         images: formData.images.length > 0 ? formData.images : ['/placeholder.svg'],
-      });
+      };
+
+      // Only include subcategoryId if it's not 'none'
+      if (formData.subcategoryId !== 'none' && formData.subcategoryId) {
+        productData.subcategoryId = formData.subcategoryId;
+      }
+
+      await addProduct(productData);
       console.log('Product added successfully');
       setIsAddDialogOpen(false);
       resetForm();
@@ -157,18 +165,26 @@ export const ProductManager = () => {
     try {
       setLoading(true);
       console.log('Attempting to update product:', { ...formData, companyId });
-      await updateProduct(editingProduct.productId, {
+
+      // Conditionally build the update data object
+      const updateData: Partial<Product> = {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
         discountedPrice: formData.discountedPrice ? parseFloat(formData.discountedPrice) : undefined,
         taxRate: formData.taxRate ? parseFloat(formData.taxRate) : 0,
         categoryId: formData.categoryId,
-        subcategoryId: formData.subcategoryId === 'none' ? undefined : formData.subcategoryId,
         stock: parseInt(formData.stock) || 0,
         images: formData.images.length > 0 ? formData.images : ['/placeholder.svg'],
         companyId,
-      });
+      };
+
+      // Only include subcategoryId if it's not 'none'
+      if (formData.subcategoryId !== 'none' && formData.subcategoryId) {
+        updateData.subcategoryId = formData.subcategoryId;
+      }
+
+      await updateProduct(editingProduct.productId, updateData);
       console.log('Product updated successfully');
       setIsEditDialogOpen(false);
       resetForm();
@@ -521,6 +537,8 @@ export const ProductManager = () => {
                 <div className="relative">
                   <img
                     src={product.images?.[0] || '/placeholder.svg'}
+                    // src={'https://previews.123rf.com/images/kchung/kchung1610/kchung161001354/64508202-test-written-by-hand-hand-writing-on-transparent-board-photo.jpg'}
+
                     alt={product.name}
                     className="w-full h-48 object-cover rounded-t-lg"
                   />

@@ -123,14 +123,14 @@ export const StorePage = () => {
         </div>
 
         <main className="container mx-auto px-4 py-6 flex-1 flex">
-          <div className="flex flex-col lg:flex-row gap-6 w-full">
+          <div className="flex flex-col lg:flex-row gap-6 w-full lg:items-start">
             {/* Sidebar */}
             <aside
               className={`fixed inset-y-0 left-0 z-40 w-64 bg-background transform ${
                 showMobileSidebar ? 'translate-x-0' : '-translate-x-full'
-              } lg:transform-none lg:static lg:w-64 transition-transform duration-300 ease-in-out h-full lg:max-h-[calc(100vh-8rem)]`}
+              } lg:transform-none lg:static lg:w-64 transition-transform duration-300 ease-in-out h-full`}
             >
-              <div className="h-full bg-background rounded-md shadow-sm p-3">
+              <div className="flex flex-col h-full bg-background rounded-md shadow-sm p-3">
                 <CategoryFilter
                   categories={categories}
                   selectedCategories={selectedCategories}
@@ -151,7 +151,7 @@ export const StorePage = () => {
             )}
 
             {/* Main Content */}
-            <div className="flex-1 max-h-[calc(100vh-8rem)] overflow-y-auto">
+            <div className="flex-1">
               <div className="mb-6">
                 <SearchBar value={searchTerm} onChange={setSearchTerm} />
               </div>

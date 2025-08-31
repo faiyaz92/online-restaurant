@@ -23,14 +23,14 @@ export const useFirebaseProducts = () => {
             name: data.name || '',
             description: data.description || '',
             price: data.price || 0,
-            discountedPrice: data.discountedPrice,
-            taxRate: data.taxRate || 0, // Added taxRate
+            discountedPrice: data.discountedPrice ?? null,
+            taxRate: data.taxRate || 0,
             categoryId: data.categoryId || '',
-            subcategoryId: data.subcategoryId,
+            subcategoryId: data.subcategoryId ?? null, // Normalize undefined/empty to null
             stock: data.stock || 0,
             images: data.images || ['/placeholder.svg'],
             companyId: data.companyId || companyId,
-            createdAt: data.createdAt || new Date().toISOString(),
+            createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
           };
         }) as Product[];
         console.log('Fetched products:', productsData);
@@ -47,14 +47,17 @@ export const useFirebaseProducts = () => {
     return () => unsubscribe();
   }, [paths]);
 
-  const addProduct = async (productData: Omit<Product, 'createdAt' | 'companyId'>) => {
+  const addProduct = async (productData: Omit<Product, 'productId' | 'createdAt' | 'companyId'>) => {
     try {
       console.log('Adding product to Firestore:', productData);
-      await addDoc(collection(firestore, paths.getProductPath()), {
+      const cleanedData = {
         ...productData,
+        subcategoryId: productData.subcategoryId ?? null, // Normalize to null
+        discountedPrice: productData.discountedPrice ?? null,
         createdAt: new Date().toISOString(),
         companyId,
-      });
+      };
+      await addDoc(collection(firestore, paths.getProductPath()), cleanedData);
       console.log('Product added successfully');
     } catch (err: any) {
       console.error('Error adding product:', err);
@@ -66,10 +69,13 @@ export const useFirebaseProducts = () => {
   const updateProduct = async (productId: string, productData: Partial<Product>) => {
     try {
       console.log('Updating product:', productId, productData);
-      await updateDoc(doc(firestore, paths.getProductPath(), productId), {
+      const cleanedData = {
         ...productData,
+        subcategoryId: productData.subcategoryId ?? null, // Normalize to null
+        discountedPrice: productData.discountedPrice ?? null,
         updatedAt: new Date().toISOString(),
-      });
+      };
+      await updateDoc(doc(firestore, paths.getProductPath(), productId), cleanedData);
       console.log('Product updated successfully');
     } catch (err: any) {
       console.error('Error updating product:', err);

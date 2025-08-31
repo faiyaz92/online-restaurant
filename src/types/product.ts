@@ -5,11 +5,11 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  discountedPrice?: number;
+  discountedPrice?: number | null;
   taxRate: number;
   images: string[];
   categoryId: string;
-  subcategoryId?: string;
+  subcategoryId?: string | null;
   stock: number;
   variants?: ProductVariant[];
   createdAt: Date;
