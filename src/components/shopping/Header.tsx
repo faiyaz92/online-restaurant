@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-8 h-8 bg-blue-700 rounded-md flex items-center justify-center">
             <Package className="h-5 w-5 text-blue-100" />
           </div>
-          <span className="font-bold text-lg">ABC Store</span>
+          <span className="font-bold text-lg">Zayka Darbar</span>
         </div>
 
         {/* Desktop Navigation */}
