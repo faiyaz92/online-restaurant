@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 export const useFirestorePaths = (companyId?: string) => {
+  companyId ='onlinerestarant';
   const basePath = 'Easy2Solutions/companyDirectory';
   const tenantCompaniesPath = `${basePath}/tenantCompanies`;
 

@@ -320,7 +320,7 @@ export const CategoryManager = () => {
                         alt={category.name}
                         className="w-10 h-10 object-cover rounded"
                       />
-                      <div>
+                      <div className="text-left">
                         <h3 className="font-semibold">{category.name}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-1">
                           {category.description || 'No description provided'}
@@ -602,7 +602,7 @@ const SubcategoriesSection = ({ categoryId }: { categoryId: string }) => {
         <div className="grid gap-3">
           {subcategories.map((sub) => (
             <div key={sub.id} className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="space-y-1">
+              <div className="space-y-1 text-left">
                 <h4 className="font-medium">{sub.name}</h4>
                 <p className="text-sm text-muted-foreground line-clamp-1">{sub.description || 'No description'}</p>
               </div>
